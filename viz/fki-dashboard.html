@@ -1,0 +1,197 @@
+<title>Corrida FKI</title>
+<style>
+  :root{
+    color-scheme: light;
+    --plane:#f3f3f0; --surface:#fcfcfb; --surface-2:#f7f7f4;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e4e3dc; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --accent:#2a78d6; --accent-soft:#cde2fb; --good:#0ca30c;
+    --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#141413;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#8f8d86;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#184f95; --good:#0ca30c;
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;
+  }}
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#141413;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#8f8d86;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#184f95; --good:#0ca30c;
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--plane); color:var(--ink); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1040px; margin:0 auto; padding-block:24px; padding-inline:16px;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  h1{font-size:23px; margin:.12em 0 .05em; letter-spacing:-.01em; text-wrap:balance;}
+  .subttl{color:var(--ink-2); margin:0;}
+  .live{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:#fff; background:#d03b3b; padding:2px 8px; border-radius:20px; letter-spacing:.03em; vertical-align:middle;}
+  .live i{width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media (prefers-reduced-motion: reduce){ .live i{animation:none} }
+  .tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:18px 0 22px;}
+  .tile{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 13px;}
+  .tile .k{font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);}
+  .tile .v{font-size:23px; margin-top:2px; letter-spacing:-.02em;}
+  .tile .v small{font-size:12px; color:var(--ink-2);}
+  section{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 16px 12px; margin-bottom:18px;}
+  h2{font-size:15px; margin:0 0 2px;} .sub{font-size:12.5px; color:var(--muted); margin:0 0 6px;}
+  svg{display:block; width:100%; height:auto;}
+  .legend{display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 2px 2px; font-size:12px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px; color:var(--ink-2);}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{text-align:right; padding:7px 8px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em;}
+  td.l,th.l{text-align:left;}
+  tr td:first-child{color:var(--muted);}
+  .best{color:var(--good); font-weight:600;}
+  .tip{position:fixed; z-index:50; pointer-events:none; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:7px 9px; font-size:12px; box-shadow:0 6px 22px rgba(0,0,0,.18); opacity:0; transition:opacity .08s;}
+  .tip .row{display:flex; justify-content:space-between; gap:12px; color:var(--ink-2)} .tip .row i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+  .foot{color:var(--muted); font-size:12px; margin-top:4px;}
+  @media (max-width:640px){ .tiles{grid-template-columns:repeat(2,1fr)} h1{font-size:20px} th,td{padding:6px} }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">FDK 100 Milhas · captura ao vivo mylaptime</div>
+  <h1 id="title">Corrida FKI</h1>
+  <p class="subttl"><span class="live"><i></i>AO VIVO</span> <span id="sub"></span></p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <h2>Tempo por volta</h2>
+    <p class="sub">ritmo e degradação — cada linha é um piloto (top 8). Voltas fora da faixa (box/incidente) aparecem como picos.</p>
+    <svg id="pace" role="img" aria-label="Tempo por volta"></svg>
+    <div class="legend" id="paceLeg"></div>
+  </section>
+
+  <section>
+    <h2>Posição por volta</h2>
+    <p class="sub">progressão exata da corrida (1º no topo).</p>
+    <svg id="pos" role="img" aria-label="Posição por volta"></svg>
+  </section>
+
+  <section>
+    <h2>Ritmo e consistência</h2>
+    <p class="sub">melhor, média e consistência (desvio-padrão dos tempos — menor = mais regular).</p>
+    <div style="overflow-x:auto"><table id="tbl"></table></div>
+  </section>
+
+  <p class="foot" id="gen"></p>
+</div>
+
+<script src="event-data.js"></script>
+<script>
+(function(){
+  var EV = window.EV || {event:{}, drivers:[]};
+  var SC=['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+  var tip=document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
+  function showTip(h,x,y){ tip.innerHTML=h; tip.style.opacity='1'; var w=tip.offsetWidth,ht=tip.offsetHeight; tip.style.left=Math.min(x+14,innerWidth-w-8)+'px'; tip.style.top=Math.max(8,y-ht-12)+'px'; }
+  function hideTip(){ tip.style.opacity='0'; }
+  function fmt(ms){ if(ms==null)return '—'; var s=ms/1000,m=Math.floor(s/60),r=s-m*60; return m? m+':'+(r<10?'0':'')+r.toFixed(3): r.toFixed(3); }
+  function el(t,a,x){ var e=document.createElementNS('http://www.w3.org/2000/svg',t); for(var k in a)e.setAttribute(k,a[k]); if(x!=null)e.textContent=x; return e; }
+
+  document.getElementById('title').textContent = EV.event.track || 'Corrida FKI';
+  document.getElementById('sub').textContent = ' ' + (EV.event.name||'') ;
+  var drivers = EV.drivers||[];
+  var maxLap = drivers.reduce(function(m,d){ return Math.max(m, d.laps.length? d.laps[d.laps.length-1].n : 0); },0)||1;
+  var leader = drivers[0]||{};
+  var allBest = drivers.map(function(d){return d.best;}).filter(function(x){return x;});
+  var fastest = allBest.length? Math.min.apply(null,allBest): null;
+  var fastestD = drivers.filter(function(d){return d.best===fastest;})[0]||{};
+
+  var tiles=[['Pilotos',drivers.length,''],['Voltas líder',(leader.lapCount||maxLap),''],
+    ['Volta + rápida',fmt(fastest),' <small>#'+(fastestD.number||'?')+'</small>'],
+    ['Líder','#'+(leader.number||'?'),' <small>'+((leader.name||'').split(' ')[0])+'</small>']];
+  document.getElementById('tiles').innerHTML=tiles.map(function(t){return '<div class="tile"><div class="k">'+t[0]+'</div><div class="v mono">'+t[1]+t[2]+'</div></div>';}).join('');
+  document.getElementById('gen').textContent='Capturado '+ (EV.generatedAt||'').replace('T',' ').slice(0,16) +' · '+ maxLap +' voltas · dados ao vivo do mylaptime.';
+
+  var top = drivers.slice(0,8);
+
+  // ---- Tempo por volta ----
+  (function(){
+    var W=720,H=340,padL=46,padR=64,padT=12,padB=26;
+    // faixa de tempo: usa percentis para ignorar outliers na escala
+    var times=[]; top.forEach(function(d){ d.laps.forEach(function(l){ if(l.ms) times.push(l.ms); }); }); times.sort(function(a,b){return a-b;});
+    if(!times.length){ return; }
+    var lo=times[Math.floor(times.length*0.03)], hi=times[Math.floor(times.length*0.90)];
+    var pad=(hi-lo)*0.12||500; var yMin=lo-pad, yMax=hi+pad;
+    var X=function(n){return padL+(W-padL-padR)*((n-1)/(maxLap-1||1));};
+    var clamp=function(v){return Math.max(yMin,Math.min(yMax,v));};
+    var Y=function(ms){return padT+(H-padT-padB)*((yMax-clamp(ms))/(yMax-yMin));};
+    var svg=document.getElementById('pace'); svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    // grid de tempo (4 linhas)
+    for(var g=0;g<=4;g++){ var v=yMin+(yMax-yMin)*g/4; var y=Y(v);
+      svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'var(--grid)','stroke-width':1}));
+      svg.appendChild(el('text',{x:padL-6,y:y+4,'text-anchor':'end',fill:'var(--muted)','font-size':10,'font-family':'ui-monospace,monospace'}, fmt(v)));
+    }
+    svg.appendChild(el('text',{x:padL,y:H-8,fill:'var(--muted)','font-size':10},'volta 1'));
+    svg.appendChild(el('text',{x:W-padR,y:H-8,'text-anchor':'end',fill:'var(--muted)','font-size':10},'volta '+maxLap));
+    top.forEach(function(d,si){
+      var col='var('+SC[si]+')';
+      var pts=d.laps.filter(function(l){return l.ms;}).map(function(l){return X(l.n)+','+Y(l.ms);}).join(' ');
+      svg.appendChild(el('polyline',{points:pts,fill:'none',stroke:col,'stroke-width':1.6,'stroke-linejoin':'round','opacity':0.9}));
+    });
+    // crosshair
+    var over=el('rect',{x:padL,y:padT,width:W-padL-padR,height:H-padT-padB,fill:'transparent'}); over.style.cursor='crosshair';
+    var cross=el('line',{x1:0,y1:padT,x2:0,y2:H-padB,stroke:'var(--axis)','stroke-width':1,'stroke-dasharray':'3 3',opacity:0});
+    svg.appendChild(over); svg.appendChild(cross);
+    over.addEventListener('mousemove',function(e2){ var rc=svg.getBoundingClientRect(); var sx=(e2.clientX-rc.left)*(W/rc.width);
+      var n=Math.round(1+(maxLap-1)*((sx-padL)/(W-padL-padR))); n=Math.max(1,Math.min(maxLap,n));
+      cross.setAttribute('x1',X(n)); cross.setAttribute('x2',X(n)); cross.setAttribute('opacity',1);
+      var rows=top.map(function(d,si){ var l=d.laps.filter(function(x){return x.n===n;})[0]; return l?{si:si,num:d.number,ms:l.ms}:null; }).filter(Boolean).sort(function(a,b){return a.ms-b.ms;});
+      showTip('<div style="color:var(--muted);margin-bottom:3px">Volta '+n+'</div>'+rows.map(function(r){return '<div class="row"><span><i style="background:var('+SC[r.si]+')"></i>#'+r.num+'</span><b class="mono">'+fmt(r.ms)+'</b></div>';}).join(''), e2.clientX, e2.clientY);
+    });
+    over.addEventListener('mouseleave',function(){cross.setAttribute('opacity',0);hideTip();});
+    document.getElementById('paceLeg').innerHTML=top.map(function(d,si){var nm=(d.name||'').split(' ').slice(0,2).join(' ');return '<span><i style="background:var('+SC[si]+')"></i>#'+d.number+' '+nm+'</span>';}).join('');
+  })();
+
+  // ---- Posição por volta ----
+  (function(){
+    var W=720,H=300,padL=34,padR=60,padT=12,padB=24;
+    var maxPos=Math.max(drivers.length, top.reduce(function(m,d){return Math.max(m,d.laps.reduce(function(a,l){return Math.max(a,l.pos||0);},0));},0))||2;
+    var X=function(n){return padL+(W-padL-padR)*((n-1)/(maxLap-1||1));};
+    var Y=function(p){return padT+(H-padT-padB)*((p-1)/(maxPos-1));};
+    var svg=document.getElementById('pos'); svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    for(var p=1;p<=maxPos;p+=(maxPos>10?2:1)){ svg.appendChild(el('line',{x1:padL,y1:Y(p),x2:W-padR,y2:Y(p),stroke:'var(--grid)','stroke-width':1}));
+      svg.appendChild(el('text',{x:padL-6,y:Y(p)+4,'text-anchor':'end',fill:'var(--muted)','font-size':10,'font-family':'ui-monospace,monospace'},p+'º')); }
+    top.forEach(function(d,si){ var col='var('+SC[si]+')';
+      var lp=d.laps.filter(function(l){return l.pos!=null;});
+      if(!lp.length)return;
+      svg.appendChild(el('polyline',{points:lp.map(function(l){return X(l.n)+','+Y(l.pos);}).join(' '),fill:'none',stroke:col,'stroke-width':2,'stroke-linejoin':'round'}));
+      var last=lp[lp.length-1];
+      svg.appendChild(el('text',{x:X(last.n)+7,y:Y(last.pos)+3.5,fill:col,'font-size':11,'font-family':'ui-monospace,monospace'},'#'+d.number));
+    });
+    var over=el('rect',{x:padL,y:padT,width:W-padL-padR,height:H-padT-padB,fill:'transparent'}); over.style.cursor='crosshair';
+    var cross=el('line',{x1:0,y1:padT,x2:0,y2:H-padB,stroke:'var(--axis)','stroke-width':1,'stroke-dasharray':'3 3',opacity:0});
+    svg.appendChild(over); svg.appendChild(cross);
+    over.addEventListener('mousemove',function(e2){ var rc=svg.getBoundingClientRect(); var sx=(e2.clientX-rc.left)*(W/rc.width);
+      var n=Math.round(1+(maxLap-1)*((sx-padL)/(W-padL-padR))); n=Math.max(1,Math.min(maxLap,n));
+      cross.setAttribute('x1',X(n)); cross.setAttribute('x2',X(n)); cross.setAttribute('opacity',1);
+      var rows=top.map(function(d,si){ var l=d.laps.filter(function(x){return x.n===n&&x.pos!=null;})[0]; return l?{si:si,num:d.number,pos:l.pos}:null;}).filter(Boolean).sort(function(a,b){return a.pos-b.pos;});
+      showTip('<div style="color:var(--muted);margin-bottom:3px">Volta '+n+'</div>'+rows.map(function(r){return '<div class="row"><span><i style="background:var('+SC[r.si]+')"></i>#'+r.num+'</span><b>'+r.pos+'º</b></div>';}).join(''), e2.clientX, e2.clientY);
+    });
+    over.addEventListener('mouseleave',function(){cross.setAttribute('opacity',0);hideTip();});
+  })();
+
+  // ---- Tabela ritmo/consistência ----
+  (function(){
+    var rows=drivers.map(function(d){
+      return '<tr><td>'+(d.pos||'')+'º</td><td class="l">#'+d.number+' '+(d.name||'')+'</td>'
+        +'<td class="mono">'+(d.lapCount||d.laps.length)+'</td>'
+        +'<td class="mono'+(d.best===fastest?' best':'')+'">'+fmt(d.best)+'</td>'
+        +'<td class="mono">'+fmt(d.avg)+'</td>'
+        +'<td class="mono">'+(d.sd!=null? '±'+(d.sd/1000).toFixed(3):'—')+'</td></tr>';
+    }).join('');
+    document.getElementById('tbl').innerHTML='<thead><tr><th>Pos</th><th class="l">Piloto</th><th>Voltas</th><th>Melhor</th><th>Média</th><th>Consist.</th></tr></thead><tbody>'+rows+'</tbody>';
+  })();
+})();
+</script>

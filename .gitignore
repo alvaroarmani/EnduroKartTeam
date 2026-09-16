@@ -1,0 +1,23 @@
+# Dependências
+node_modules/
+
+# Segredos e credenciais — NUNCA comitar
+.env
+
+# Dados capturados / buffers / estado do worker (grandes e voláteis)
+data/
+pairing-code.txt
+
+# Logs
+*.log
+
+# Cópias de dados geradas ao lado dos dashboards (regeneradas do buffer)
+viz/viz-data.js
+viz/event-data.js
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Locks/estado de sessão do Claude Code
+.claude/*.lock

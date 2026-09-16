@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste do extrator mylaptime</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; background: #0f1115; color: #e6e6e6; }
+    header { padding: 12px 16px; background: #171a21; border-bottom: 1px solid #2a2f3a; }
+    h1 { font-size: 16px; margin: 0; }
+    .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 49px); }
+    .col { overflow: auto; padding: 16px; }
+    .col + .col { border-left: 1px solid #2a2f3a; }
+    pre { white-space: pre-wrap; word-break: break-word; font: 12px ui-monospace, monospace; }
+    .ok { color: #4ade80; } .bad { color: #f87171; }
+    .assert { padding: 2px 0; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #9aa4b2; }
+    /* esconde o "palco" — é só fonte de DOM para o extrator */
+    #stage { position: absolute; left: -9999px; top: 0; }
+  </style>
+</head>
+<body>
+  <header><h1>Teste do extrator mylaptime · <span id="ver"></span></h1></header>
+
+  <!-- Palco: DOM sintético espelhando o esquema real do LiveTime -->
+  <div id="stage" aria-hidden="true">
+    <div class="lt-timer-display">
+      <span class="lt-timer-label">Tempo de Prova</span>
+      <div class="lt-timer-content">
+        <div class="lt-timer-value">1:32:10.284</div>
+        <span class="lt-timer-flag"><i class="lt-racing-flag-icon" style="color:#16a34a">flag</i></span>
+      </div>
+    </div>
+
+    <div class="lt-table-header">
+      <div class="lt-th-pos">POS</div>
+      <div class="lt-th-driver">Piloto</div>
+      <div class="lt-th-center">M.V</div>
+      <div class="lt-th-center">T.M.V</div>
+      <div class="lt-th-center">LAP</div>
+      <div class="lt-th-center">T.U.V</div>
+      <div class="lt-th-center">DIFF</div>
+      <div class="lt-th-center">GAP</div>
+      <div class="lt-th-center lt-column-hidden">M.V.2</div>
+    </div>
+
+    <div class="lt-competitors-list">
+      <!-- Linha 1: líder, com histórico de voltas -->
+      <div class="lt-competitor-row">
+        <div class="lt-row-desktop">
+          <div class="lt-data-cell lt-data-cell--pos"><div class="lt-pos-badge lt-pos-1">1</div></div>
+          <div class="lt-data-cell lt-data-cell--driver">
+            <div class="lt-driver-info">
+              <span class="lt-driver-number">#7</span>
+              <span class="lt-driver-name">EQUIPE LEKT</span>
+            </div>
+          </div>
+          <div class="lt-data-cell lt-mono">18</div>
+          <div class="lt-data-cell lt-mono lt-small">44.812</div>
+          <div class="lt-data-cell lt-mono">41</div>
+          <div class="lt-data-cell lt-mono lt-small">45.203</div>
+          <div class="lt-data-cell lt-mono lt-small">---</div>
+          <div class="lt-data-cell lt-mono lt-small">---</div>
+        </div>
+        <div class="lt-row-mobile">
+          <div class="lt-mobile-header">
+            <div class="lt-mobile-driver">
+              <div class="lt-mobile-driver-main">
+                <span class="lt-driver-number">#7</span>
+                <span class="lt-driver-name">EQUIPE LEKT</span>
+                <span class="lt-driver-state">PISTA</span>
+              </div>
+              <div class="lt-mobile-driver-sub"><span class="lt-driver-category">Categoria: INDOOR</span></div>
+            </div>
+          </div>
+          <div class="lt-mobile-stats-grid">
+            <div class="lt-mobile-stat"><span class="lt-stat-label">M.V</span><span class="lt-stat-value lt-mono">18</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.M.V</span><span class="lt-stat-value lt-mono">44.812</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">LAP</span><span class="lt-stat-value lt-mono">41</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.U.V</span><span class="lt-stat-value lt-mono">45.203</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">DIFF</span><span class="lt-stat-value lt-mono">---</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">GAP</span><span class="lt-stat-value lt-mono">---</span></div>
+          </div>
+        </div>
+        <div class="lt-expansion-panel">
+          <div class="lt-lap-row">40 45.203</div>
+          <div class="lt-lap-row">39 44.998</div>
+          <div class="lt-lap-row">38 1:02.540</div>
+          <div class="lt-lap-row">37 44.812</div>
+        </div>
+      </div>
+
+      <!-- Linha 2: 2º, gap em tempo -->
+      <div class="lt-competitor-row">
+        <div class="lt-row-mobile">
+          <div class="lt-mobile-header"><div class="lt-mobile-driver"><div class="lt-mobile-driver-main">
+            <span class="lt-driver-number">#3</span>
+            <span class="lt-driver-name">RIVAL FAST</span>
+            <span class="lt-driver-state">BOX</span>
+          </div>
+          <div class="lt-mobile-driver-sub"><span class="lt-driver-category">Categoria: INDOOR</span></div></div></div>
+          <div class="lt-mobile-stats-grid">
+            <div class="lt-mobile-stat"><span class="lt-stat-label">M.V</span><span class="lt-stat-value">20</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.M.V</span><span class="lt-stat-value">44.955</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">LAP</span><span class="lt-stat-value">41</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.U.V</span><span class="lt-stat-value">45.610</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">DIFF</span><span class="lt-stat-value">+2.317</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">GAP</span><span class="lt-stat-value">+2.317</span></div>
+          </div>
+          <div class="lt-expansion-panel"><div class="lt-expansion-empty">Nenhuma passagem registrada</div></div>
+        </div>
+      </div>
+
+      <!-- Linha 3: 3º, gap por voltas -->
+      <div class="lt-competitor-row">
+        <div class="lt-row-mobile">
+          <div class="lt-mobile-header"><div class="lt-mobile-driver"><div class="lt-mobile-driver-main">
+            <span class="lt-driver-number">#12</span>
+            <span class="lt-driver-name">LEKT B</span>
+          </div>
+          <div class="lt-mobile-driver-sub"><span class="lt-driver-category">Categoria: INDOOR</span></div></div></div>
+          <div class="lt-mobile-stats-grid">
+            <div class="lt-mobile-stat"><span class="lt-stat-label">M.V</span><span class="lt-stat-value">15</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.M.V</span><span class="lt-stat-value">45.401</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">LAP</span><span class="lt-stat-value">39</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">T.U.V</span><span class="lt-stat-value">46.002</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">DIFF</span><span class="lt-stat-value">+2 voltas</span></div>
+            <div class="lt-mobile-stat"><span class="lt-stat-label">GAP</span><span class="lt-stat-value">+1 volta</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="col">
+      <h2>Snapshot extraído (extractAll)</h2>
+      <pre id="dump"></pre>
+    </div>
+    <div class="col">
+      <h2>Asserções</h2>
+      <div id="asserts"></div>
+      <h2>Linhas da equipe (filterTeam)</h2>
+      <pre id="team"></pre>
+    </div>
+  </div>
+
+  <script src="../src/extractor/mylaptime-extractor.js"></script>
+  <script>
+    const X = window.MyLapExtractor;
+    document.getElementById('ver').textContent = 'v' + X.VERSION;
+    const snap = X.extractAll(document);
+    document.getElementById('dump').textContent = JSON.stringify(snap, null, 2);
+
+    const team = X.filterTeam(snap.competitors, { numbers: [7, 12], names: ['LEKT'] });
+    document.getElementById('team').textContent = JSON.stringify(
+      team.map(c => ({ pos: c.pos, number: c.number, name: c.name, state: c.state })), null, 2);
+
+    // Asserções mínimas de sanidade
+    const A = [];
+    const eq = (label, got, want) => A.push({ label, ok: JSON.stringify(got) === JSON.stringify(want), got, want });
+    eq('parse 1:32:10.284', X.parseTimeToMs('1:32:10.284'), (92 * 60 + 10) * 1000 + 284);
+    eq('parse 44.812', X.parseTimeToMs('44.812'), 44812);
+    eq('parse 1:02.540', X.parseTimeToMs('1:02.540'), 62540);
+    eq('parse "---"', X.parseTimeToMs('---'), null);
+    eq('gap +2.317 → time', X.parseGap('+2.317').type, 'time');
+    eq('gap +1 volta → laps', X.parseGap('+1 volta').laps, 1);
+    eq('relógio ms', snap.raceClock.ms, (92 * 60 + 10) * 1000 + 284);
+    eq('bandeira verde', snap.flag.state, 'green');
+    eq('3 competidores', snap.competitors.length, 3);
+    eq('líder #7', snap.competitors[0].number, '7');
+    eq('líder nome', snap.competitors[0].name, 'EQUIPE LEKT');
+    eq('líder lapCount=41', snap.competitors[0].lapCount, 41);
+    eq('líder T.U.V ms', snap.competitors[0].lastLapTime.ms, 45203);
+    eq('líder estado PISTA', snap.competitors[0].state, 'PISTA');
+    eq('líder 4 passagens no histórico', snap.competitors[0].lapHistory.length, 4);
+    eq('1ª passagem ms', snap.competitors[0].lapHistory[0].ms, 45203);
+    eq('passagem longa 1:02.540', snap.competitors[0].lapHistory[2].ms, 62540);
+    eq('#3 estado BOX', snap.competitors[1].state, 'BOX');
+    eq('#3 gap time ms', snap.competitors[1].gap.ms, 2317);
+    eq('#3 sem histórico (vazio)', snap.competitors[1].lapHistory.length, 0);
+    eq('#12 diff 2 voltas', snap.competitors[2].diff.laps, 2);
+    eq('equipe = 2 linhas', team.length, 2);
+
+    const box = document.getElementById('asserts');
+    box.innerHTML = A.map(a =>
+      `<div class="assert ${a.ok ? 'ok' : 'bad'}">${a.ok ? '✓' : '✗'} ${a.label}` +
+      (a.ok ? '' : ` — obtido ${JSON.stringify(a.got)}, esperado ${JSON.stringify(a.want)}`) +
+      `</div>`).join('');
+    const fails = A.filter(a => !a.ok).length;
+    document.title = (fails ? '✗ ' + fails + ' falhas' : '✓ tudo ok') + ' — Teste extrator';
+  </script>
+</body>
+</html>

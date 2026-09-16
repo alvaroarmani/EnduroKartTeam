@@ -1,0 +1,231 @@
+<title>EnduroKart Telemetria</title>
+<style>
+  :root{
+    color-scheme: light;
+    --plane:#f3f3f0; --surface:#fcfcfb; --surface-2:#f7f7f4;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e4e3dc; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --accent:#2a78d6; --accent-soft:#cde2fb;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+    --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#141413;
+      --ink:#ffffff; --ink-2:#c3c2b7; --muted:#8f8d86;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --accent:#3987e5; --accent-soft:#184f95;
+      --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+      --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#141413;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#8f8d86;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#184f95;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--plane); color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1040px; margin:0 auto; padding-block:24px; padding-inline:16px;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+  header .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  h1{font-size:23px; margin:.15em 0 .1em; letter-spacing:-.01em;}
+  header p{color:var(--ink-2); margin:0; max-width:60ch;}
+  .tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:20px 0 26px;}
+  .tile{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
+  .tile .k{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);}
+  .tile .v{font-size:26px; margin-top:2px; letter-spacing:-.02em;}
+  .tile .v small{font-size:13px; color:var(--ink-2); letter-spacing:0;}
+  section{background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px 16px 10px; margin-bottom:18px;}
+  .sec-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;}
+  h2{font-size:15px; margin:0;}
+  .sec-head .sub{font-size:12.5px; color:var(--muted);}
+  svg{display:block; width:100%; height:auto;}
+  select{font:13px system-ui; color:var(--ink); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:6px 10px; max-width:100%;}
+  .legend{display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 2px 6px; font-size:12px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px; color:var(--ink-2);}
+  .legend i{width:11px; height:11px; border-radius:3px; display:inline-block;}
+  .foot{color:var(--muted); font-size:12px; margin-top:6px;}
+  .tip{position:fixed; z-index:50; pointer-events:none; background:var(--surface);
+    border:1px solid var(--border); border-radius:8px; padding:7px 9px; font-size:12px;
+    box-shadow:0 6px 22px rgba(0,0,0,.18); max-width:240px; opacity:0; transition:opacity .08s;}
+  .tip b{color:var(--ink)} .tip .row{display:flex; justify-content:space-between; gap:12px; color:var(--ink-2)}
+  .tip .row i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+  @media (max-width:640px){ .tiles{grid-template-columns:repeat(2,1fr)} h1{font-size:20px} }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">FDK 100 Milhas · Ingestão mylaptime</div>
+    <h1>Telemetria capturada</h1>
+    <p>Dados reais extraídos ao vivo do mylaptime durante a noite de 15–16/09, em rodízio por
+       todos os eventos ativos. Amostra bruta — pré-calibração do histórico de voltas.</p>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <div class="sec-head"><h2>Cobertura de eventos</h2>
+      <span class="sub">nº de leituras por evento (top 12) · uma leitura ≈ um retrato do grid</span></div>
+    <svg id="coverage" role="img" aria-label="Leituras por evento"></svg>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Progressão de posições</h2>
+      <select id="picker" aria-label="Escolher evento"></select></div>
+    <div class="foot" id="posSub" style="margin:0 0 4px"></div>
+    <svg id="positions" role="img" aria-label="Posições ao longo do tempo"></svg>
+    <div class="legend" id="posLegend"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Melhor volta por piloto</h2>
+      <span class="sub" id="blSub"></span></div>
+    <svg id="bestlap" role="img" aria-label="Melhor volta por piloto"></svg>
+    <div class="foot">Tempos em <span class="mono">M:SS.mmm</span>. Barra menor = mais rápido.</div>
+  </section>
+
+  <p class="foot">Gerado de <span class="mono">data/snapshots-*.jsonl</span> · <span id="gen"></span>.
+     O histórico volta-a-volta ainda está em calibração (só a última volta por piloto por enquanto).</p>
+</div>
+
+<script src="viz-data.js"></script>
+<script>
+(function(){
+  var V = window.VIZ || {events:[], totals:{}};
+  var SC = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+  var tip = document.createElement('div'); tip.className='tip'; document.body.appendChild(tip);
+  function showTip(html, x, y){ tip.innerHTML=html; tip.style.opacity='1';
+    var w=tip.offsetWidth, h=tip.offsetHeight;
+    tip.style.left=Math.min(x+14, innerWidth-w-8)+'px';
+    tip.style.top=Math.max(8, y-h-12)+'px'; }
+  function hideTip(){ tip.style.opacity='0'; }
+  function fmt(ms){ if(ms==null) return '—'; var s=ms/1000; var m=Math.floor(s/60); var r=(s-m*60);
+    return (m? m+':'+ (r<10?'0':'')+r.toFixed(3) : r.toFixed(3)); }
+  function el(tag,attrs,txt){ var e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    for(var k in attrs) e.setAttribute(k,attrs[k]); if(txt!=null) e.textContent=txt; return e; }
+  function label(ev, rank){ var t=(ev.track||'').trim();
+    var good = t && !/^(corrida|race|tomada de tempo|classificat|teste|\?)$/i.test(t);
+    return (good? t : ('Evento '+rank)); }
+
+  // ---- tiles ----
+  var evs = V.events||[];
+  var totReadings = evs.reduce(function(s,e){return s+e.readings;},0);
+  var maxGrid = evs.reduce(function(m,e){return Math.max(m,e.nComp);},0);
+  var bests = evs.map(function(e){return e.eventBest;}).filter(function(x){return x&&x>8000&&x<180000;});
+  var fastest = bests.length? Math.min.apply(null,bests): null;
+  var tiles=[['Eventos', evs.length, ''],['Leituras', totReadings.toLocaleString('pt-BR'), ''],
+    ['Maior grid', maxGrid, ' <small>pilotos</small>'],['Volta + rápida', fmt(fastest), '']];
+  document.getElementById('tiles').innerHTML = tiles.map(function(t){
+    return '<div class="tile"><div class="k">'+t[0]+'</div><div class="v mono">'+t[1]+t[2]+'</div></div>';}).join('');
+  document.getElementById('gen').textContent = (V.generatedAt||'').replace('T',' ').slice(0,16);
+
+  // ---- coverage bars ----
+  (function(){
+    var top = evs.slice(0,12);
+    var W=720, rowH=26, padL=150, padR=56, top0=8, H=top0+top.length*rowH+8;
+    var max = top[0]? top[0].readings : 1;
+    var svg = document.getElementById('coverage'); svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    top.forEach(function(e,idx){
+      var y=top0+idx*rowH, bw=(W-padL-padR)*(e.readings/max);
+      var name=label(e, idx+1)+' · '+e.nComp+'p';
+      svg.appendChild(el('text',{x:padL-8,y:y+rowH/2+4,'text-anchor':'end',fill:'var(--ink-2)','font-size':12}, name.length>22?name.slice(0,21)+'…':name));
+      var r=el('rect',{x:padL,y:y+4,width:Math.max(2,bw),height:rowH-10,rx:4,fill:'var(--accent)'});
+      r.style.cursor='default';
+      r.addEventListener('mousemove',function(ev2){ showTip('<b>'+label(e,idx+1)+'</b><br>'+e.nComp+' pilotos · '+e.readings+' leituras<br><span style="color:var(--muted)">'+(e.track||'')+'</span>', ev2.clientX, ev2.clientY); });
+      r.addEventListener('mouseleave',hideTip);
+      svg.appendChild(r);
+      svg.appendChild(el('text',{x:padL+Math.max(2,bw)+6,y:y+rowH/2+4,fill:'var(--muted)','font-size':11,'font-family':'ui-monospace,monospace'}, e.readings));
+    });
+  })();
+
+  // ---- event picker ----
+  var chartable = evs.map(function(e,i){return {e:e,rank:i+1};}).filter(function(o){return o.e.nComp>=3 && o.e.readings>=15;});
+  var picker=document.getElementById('picker');
+  chartable.forEach(function(o,k){ var opt=document.createElement('option'); opt.value=k;
+    opt.textContent=label(o.e,o.rank)+' · '+o.e.nComp+'p · '+o.e.readings+' leituras'; picker.appendChild(opt); });
+  picker.addEventListener('change',function(){ render(+picker.value); });
+
+  // ---- positions line chart ----
+  function render(k){
+    var o=chartable[k]; var ev=o.e;
+    document.getElementById('posSub').textContent = label(ev,o.rank)+' — '+ev.nComp+' pilotos, '+ev.readings+' leituras';
+    document.getElementById('blSub').textContent = label(ev,o.rank);
+    // top 8 by best final position
+    var drivers = ev.top.map(function(d){
+      var pts=d.series.filter(function(p){return p.pos!=null;});
+      var fin = pts.length? pts[pts.length-1].pos : 99;
+      return {d:d, pts:pts, fin:fin};
+    }).filter(function(x){return x.pts.length>1;}).sort(function(a,b){return a.fin-b.fin;}).slice(0,8);
+
+    var W=720,H=340, padL=34,padR=64,padT=14,padB=26;
+    var maxI = ev.readings-1 || 1;
+    var maxPos = Math.max(3, drivers.reduce(function(m,x){return Math.max(m, Math.max.apply(null,x.pts.map(function(p){return p.pos;})));},0));
+    var X=function(i){return padL+(W-padL-padR)*(i/maxI);};
+    var Y=function(p){return padT+(H-padT-padB)*((p-1)/(maxPos-1));}; // pos1 no topo
+    var svg=document.getElementById('positions'); svg.innerHTML=''; svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    // gridlines por posição
+    for(var p=1;p<=maxPos;p+=(maxPos>10?2:1)){
+      svg.appendChild(el('line',{x1:padL,y1:Y(p),x2:W-padR,y2:Y(p),stroke:'var(--grid)','stroke-width':1}));
+      svg.appendChild(el('text',{x:padL-6,y:Y(p)+4,'text-anchor':'end',fill:'var(--muted)','font-size':10,'font-family':'ui-monospace,monospace'}, p+'º'));
+    }
+    // eixo x rótulos (início/fim)
+    svg.appendChild(el('text',{x:padL,y:H-8,fill:'var(--muted)','font-size':10}, 'início'));
+    svg.appendChild(el('text',{x:W-padR,y:H-8,'text-anchor':'end',fill:'var(--muted)','font-size':10}, 'fim da captura'));
+    drivers.forEach(function(x,si){
+      var col='var('+SC[si]+')';
+      var pathPts=x.pts.map(function(pp){return X(pp.i)+','+Y(pp.pos);}).join(' ');
+      svg.appendChild(el('polyline',{points:pathPts,fill:'none',stroke:col,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+      var last=x.pts[x.pts.length-1];
+      svg.appendChild(el('text',{x:X(last.i)+7,y:Y(last.pos)+3.5,fill:col,'font-size':11,'font-family':'ui-monospace,monospace'}, '#'+x.d.number));
+    });
+    // legenda
+    document.getElementById('posLegend').innerHTML = drivers.map(function(x,si){
+      var nm=(x.d.name||('#'+x.d.number)); return '<span><i style="background:var('+SC[si]+')"></i>#'+x.d.number+' '+(nm.length>16?nm.slice(0,15)+'…':nm)+'</span>';}).join('');
+    // hover crosshair
+    var over=el('rect',{x:padL,y:padT,width:W-padL-padR,height:H-padT-padB,fill:'transparent'}); over.style.cursor='crosshair';
+    var cross=el('line',{x1:0,y1:padT,x2:0,y2:H-padB,stroke:'var(--axis)','stroke-width':1,'stroke-dasharray':'3 3',opacity:0});
+    svg.appendChild(over); svg.appendChild(cross);
+    over.addEventListener('mousemove',function(ev2){
+      var rect=svg.getBoundingClientRect(); var sx=(ev2.clientX-rect.left)*(W/rect.width);
+      var i=Math.round(maxI*((sx-padL)/(W-padL-padR))); i=Math.max(0,Math.min(maxI,i));
+      cross.setAttribute('x1',X(i)); cross.setAttribute('x2',X(i)); cross.setAttribute('opacity',1);
+      var rows=drivers.map(function(x,si){
+        var near=x.pts.reduce(function(a,b){return Math.abs(b.i-i)<Math.abs(a.i-i)?b:a;});
+        return {si:si,num:x.d.number,pos:near.pos};
+      }).sort(function(a,b){return a.pos-b.pos;});
+      showTip(rows.map(function(r){return '<div class="row"><span><i style="background:var('+SC[r.si]+')"></i>#'+r.num+'</span><b>'+r.pos+'º</b></div>';}).join(''), ev2.clientX, ev2.clientY);
+    });
+    over.addEventListener('mouseleave',function(){cross.setAttribute('opacity',0);hideTip();});
+
+    // ---- best lap bars ----
+    var bl=ev.top.map(function(d){return {num:d.number,name:d.name,best:d.best};})
+      .filter(function(d){return d.best&&d.best>8000&&d.best<180000;})
+      .sort(function(a,b){return a.best-b.best;}).slice(0,12);
+    var BW=720, brH=24, bpadL=150, bpadR=70, bt=8, BH=bt+bl.length*brH+8;
+    var bmax=bl.length? bl[bl.length-1].best : 1, bmin=bl.length? bl[0].best:0;
+    var sv2=document.getElementById('bestlap'); sv2.innerHTML=''; sv2.setAttribute('viewBox','0 0 '+BW+' '+Math.max(40,BH));
+    bl.forEach(function(d,idx){
+      var y=bt+idx*brH; var frac=bmax>0?(d.best/bmax):0; var bw=(BW-bpadL-bpadR)*frac;
+      var nm='#'+d.num+' '+(d.name||''); if(nm.length>22)nm=nm.slice(0,21)+'…';
+      sv2.appendChild(el('text',{x:bpadL-8,y:y+brH/2+4,'text-anchor':'end',fill:'var(--ink-2)','font-size':12}, nm));
+      var r=el('rect',{x:bpadL,y:y+4,width:Math.max(2,bw),height:brH-9,rx:4,fill: idx===0?'var(--accent)':'var(--accent-soft)'});
+      if(idx===0) r.setAttribute('fill','var(--accent)');
+      sv2.appendChild(r);
+      sv2.appendChild(el('text',{x:bpadL+Math.max(2,bw)+6,y:y+brH/2+4,fill:'var(--ink-2)','font-size':11.5,'font-family':'ui-monospace,monospace'}, fmt(d.best)));
+    });
+    if(!bl.length){ sv2.appendChild(el('text',{x:10,y:24,fill:'var(--muted)','font-size':12},'sem tempos de volta válidos neste evento')); }
+  }
+
+  if(chartable.length){ render(0); }
+  else { document.getElementById('posSub').textContent='sem eventos com dados suficientes para gráfico.'; }
+})();
+</script>

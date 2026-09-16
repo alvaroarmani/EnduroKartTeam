@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Teste readLaps</title>
+<body style="font:14px system-ui;background:#0f1115;color:#e6e6e6;padding:16px">
+<div id="out"></div>
+
+<!-- DOM sintético com a estrutura REAL do painel de voltas (mylaptime, 16/09) -->
+<div id="stage" style="position:absolute;left:-9999px">
+  <div class="lt-competitors-list">
+    <div class="lt-competitor-row lt-competitor-row--clickable">
+      <div class="lt-row-mobile"><div class="lt-mobile-header"><div class="lt-mobile-driver"><div class="lt-mobile-driver-main">
+        <span class="lt-driver-number">#11</span><span class="lt-driver-name">LAEDSON JESUS</span></div>
+        <div class="lt-mobile-driver-sub"><span class="lt-driver-category">Categoria: INDOOR</span></div></div></div>
+        <div class="lt-mobile-stats-grid">
+          <div class="lt-mobile-stat"><span class="lt-stat-label">M.V</span><span class="lt-stat-value">14</span></div>
+          <div class="lt-mobile-stat"><span class="lt-stat-label">T.M.V</span><span class="lt-stat-value">00:35.290</span></div>
+          <div class="lt-mobile-stat"><span class="lt-stat-label">Lap</span><span class="lt-stat-value">20</span></div>
+          <div class="lt-mobile-stat"><span class="lt-stat-label">T.U.V</span><span class="lt-stat-value">00:41.097</span></div>
+          <div class="lt-mobile-stat"><span class="lt-stat-label">Diff</span><span class="lt-stat-value">---</span></div>
+          <div class="lt-mobile-stat"><span class="lt-stat-label">Gap</span><span class="lt-stat-value">---</span></div>
+        </div>
+      </div>
+      <div class="lt-expansion-panel"><div class="lt-passings-grid">
+        <div class="lt-passing-item lt-passing-item--race">
+          <div class="lt-passing-field"><span>Lap</span><strong>20</strong></div>
+          <div class="lt-passing-field lt-passing-field--pos"><span>Pos</span><strong>1</strong></div>
+          <div class="lt-passing-field"><span>Tempo</span><strong class="lt-mono"><span class="lt-time-normal">00:41.097</span></strong></div>
+          <div class="lt-passing-field"><span>Diff</span><strong class="lt-mono">---</strong></div>
+          <div class="lt-passing-field"><span>Líder</span><strong class="lt-mono">---</strong></div>
+          <div class="lt-passing-field"><span>Delta</span><strong class="lt-mono">0:05.807</strong></div>
+        </div>
+        <div class="lt-passing-item lt-passing-item--race">
+          <div class="lt-passing-field"><span>Lap</span><strong>19</strong></div>
+          <div class="lt-passing-field lt-passing-field--pos"><span>Pos</span><strong>1</strong></div>
+          <div class="lt-passing-field"><span>Tempo</span><strong class="lt-mono"><span class="lt-time-normal">00:35.353</span></strong></div>
+          <div class="lt-passing-field"><span>Delta</span><strong class="lt-mono">0:00.063</strong></div>
+        </div>
+        <div class="lt-passing-item lt-passing-item--race">
+          <div class="lt-passing-field"><span>Lap</span><strong>18</strong></div>
+          <div class="lt-passing-field lt-passing-field--pos"><span>Pos</span><strong>2</strong></div>
+          <div class="lt-passing-field"><span>Tempo</span><strong class="lt-mono"><span class="lt-time-normal">00:36.923</span></strong></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<script src="../src/extractor/mylaptime-extractor.js"></script>
+<script>
+  var X=window.MyLapExtractor;
+  var snap=X.extractAll(document);
+  var c=snap.competitors[0];
+  var A=[];
+  function eq(l,g,w){A.push({l:l,ok:JSON.stringify(g)===JSON.stringify(w),g:g,w:w});}
+  eq('lapCount', c.lapCount, 20);
+  eq('nº de voltas no histórico', c.lapHistory.length, 3);
+  eq('volta[0].n', c.lapHistory[0].n, 20);
+  eq('volta[0].ms', c.lapHistory[0].ms, 41097);
+  eq('volta[1].n', c.lapHistory[1].n, 19);
+  eq('volta[1].ms', c.lapHistory[1].ms, 35353);
+  eq('volta[1].pos', c.lapHistory[1].pos, 1);
+  eq('volta[2].n', c.lapHistory[2].n, 18);
+  eq('volta[2].ms', c.lapHistory[2].ms, 36923);
+  eq('volta[2].pos', c.lapHistory[2].pos, 2);
+  var fails=A.filter(function(a){return !a.ok;});
+  document.getElementById('out').innerHTML='<pre>'+A.map(function(a){return (a.ok?'✓':'✗')+' '+a.l+(a.ok?'':' — obtido '+JSON.stringify(a.g)+', esperado '+JSON.stringify(a.w));}).join('\n')+'</pre>';
+  document.title=(fails.length?'✗ '+fails.length+' falhas':'✓ tudo ok')+' — readLaps';
+</script>
+</body>
+</html>
