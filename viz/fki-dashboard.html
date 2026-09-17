@@ -122,8 +122,11 @@
     // faixa de tempo: usa percentis para ignorar outliers na escala
     var times=[]; top.forEach(function(d){ d.laps.forEach(function(l){ if(l.ms) times.push(l.ms); }); }); times.sort(function(a,b){return a-b;});
     if(!times.length){ return; }
-    var lo=times[Math.floor(times.length*0.03)], hi=times[Math.floor(times.length*0.90)];
-    var pad=(hi-lo)*0.12||500; var yMin=lo-pad, yMax=hi+pad;
+    // faixa competitiva: foca no ritmo real (p2..p75); voltas lentas (tráfego/box) clipam no topo
+    var lo=times[Math.floor(times.length*0.02)], hi=times[Math.floor(times.length*0.75)];
+    if(hi<=lo) hi=times[times.length-1];
+    var pad=(hi-lo)*0.15||500; var yMin=Math.max(0,lo-pad), yMax=hi+pad;
+    var median=times[Math.floor(times.length*0.5)];
     var X=function(n){return padL+(W-padL-padR)*((n-1)/(maxLap-1||1));};
     var clamp=function(v){return Math.max(yMin,Math.min(yMax,v));};
     var Y=function(ms){return padT+(H-padT-padB)*((yMax-clamp(ms))/(yMax-yMin));};
@@ -135,6 +138,8 @@
     }
     svg.appendChild(el('text',{x:padL,y:H-8,fill:'var(--muted)','font-size':10},'volta 1'));
     svg.appendChild(el('text',{x:W-padR,y:H-8,'text-anchor':'end',fill:'var(--muted)','font-size':10},'volta '+maxLap));
+    if(median){ var ym=Y(median); svg.appendChild(el('line',{x1:padL,y1:ym,x2:W-padR,y2:ym,stroke:'var(--accent)','stroke-width':1,'stroke-dasharray':'2 4',opacity:0.55}));
+      svg.appendChild(el('text',{x:W-padR-2,y:ym-4,'text-anchor':'end',fill:'var(--accent)','font-size':9,'font-family':'ui-monospace,monospace'},'mediana '+fmt(median))); }
     top.forEach(function(d,si){
       var col='var('+SC[si]+')';
       var pts=d.laps.filter(function(l){return l.ms;}).map(function(l){return X(l.n)+','+Y(l.ms);}).join(' ');
