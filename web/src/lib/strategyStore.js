@@ -8,7 +8,7 @@ const LS = 'ek_strategy_v1';
 
 export const DEFAULTS = {
   durationMin: 240, boxOpenMin: 10, boxCloseBeforeEndMin: 20,
-  minStopSec: 300, stopCycleSec: 480, totalStops: 7,
+  minStopSec: 300, stopCycleSec: 480, totalStops: 7, targetWeightKg: 100,
   karts: [
     { id: 'A', label: 'Kart A', number: '', stops: 0 },
     { id: 'B', label: 'Kart B', number: '', stops: 0 },

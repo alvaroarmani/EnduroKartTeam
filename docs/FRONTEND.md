@@ -36,7 +36,8 @@ web/src/
     analytics.js              DERIVA do histórico: stints, degradação, aproximação, paceRank, timeline
     race.js                   relógio (elapsedFrom) + folga/janela do box (boxState) + fmtClock
     decisions.js              DECISÃO por kart (decideKart → o que fazer) + driverRating (habilidade)
-  test/strategy-sim.mjs       SIMULADOR: 16 cenários que validam as indicações (npm run sim)
+    allocation.js             PLANEJADOR: suggestAllocation (16 pilotos → grade 4×8) + driverScore
+  test/strategy-sim.mjs       SIMULADOR: 18 cenários / 35 asserções (npm run sim)
   components/
     Tiles, PaceChart, PositionChart, ConsistencyTable   (telemetria)
     TeamCockpit                COCKPIT: 4 karts, stint, folga, próxima ação
@@ -53,8 +54,10 @@ web/src/
   **próxima ação** (🟢 seguir / 🟡 aperta / 🔴 pare já / 🟠 no box). Metrônomo das paradas.
 - **Batalhas** — carro à frente/atrás do foco: gap, taxa de aproximação (s/volta) e "alcança em N
   voltas". Guard de "ritmo parelho".
-- **Pilotos** — ranking de ritmo dos karts (piloto forte no kart fraco), plantel dos 13 com nível de
-  experiência, e a grade de rotação (4 karts × 8 stints).
+- **Pilotos & Kart** — plantel (até 16) com habilidade híbrida (medido + nível + 🔥 pressão),
+  **ficha & pesagem** (peso → lastro para o alvo), piloto atual por kart, ranking de ritmo dos
+  karts, e a rotação (4×8) com **✨ sugerir alocação** (ases na pressão, forte no kart lento,
+  ~2 stints/piloto, sem seguidos) + alerta de novato na zona de pressão.
 - **Timeline** — história da corrida reconstruída do histórico (paradas, recordes, liderança) +
   eventos ao vivo (bandeira/líder) + **alertas** (folga crítica, ritmo caindo, bandeira → box).
 - **Telemetria (FKI)**, **Virtual + Previsão**, **Estratégia (watchdog)** — como antes.

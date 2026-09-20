@@ -8,6 +8,7 @@
 import { computeStrategy, greenPace, estimateStops } from '../src/lib/strategy-engine.js';
 import { stints, currentStint, degradation, pairTrend, catchLaps, paceRank } from '../src/lib/analytics.js';
 import { decideKart, driverRating } from '../src/lib/decisions.js';
+import { suggestAllocation, driverScore } from '../src/lib/allocation.js';
 
 const ST = { durationMin: 240, boxOpenMin: 10, boxCloseBeforeEndMin: 20, minStopSec: 300, stopCycleSec: 480, totalStops: 7 };
 const BOX_CLOSE = ST.durationMin * 60 - ST.boxCloseBeforeEndMin * 60; // 13200s
@@ -190,6 +191,52 @@ console.log('\nS16. KPI DA EQUIPE: o kart mais urgente aparece com maior priorid
   const sorted = [...karts].sort((a, b) => b.action.priority - a.action.priority);
   check('o mais urgente é o de risco (prioridade máxima)', sorted[0].action.priority >= 90, `top=${sorted[0].action.code}`);
   check('o "done" tem prioridade mínima', karts[2].action.priority === 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\nS17. ALOCAÇÃO: 16 pilotos em 4 karts × 8 stints — regras da alocação');
+{
+  const roster = [];
+  for (let i = 1; i <= 16; i++) {
+    const exp = i <= 4 ? 'A' : i <= 10 ? 'B' : 'C';
+    roster.push({ id: 'd' + i, name: 'P' + i, exp, pressure: exp === 'A' });
+  }
+  const karts = [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }];
+  const kartPace = new Map([['A', 42000], ['B', 41500], ['C', 41000], ['D', 40500]]); // A mais lento
+  const nStints = 8;
+  const plan = suggestAllocation({ roster, karts, nStints, kartPace });
+  const score = (id) => driverScore(roster.find((r) => r.id === id), null);
+
+  const allFilled = karts.every((k) => plan[k.id].every((x) => x));
+  check('todas as 32 vagas preenchidas', allFilled);
+
+  const count = {}; karts.forEach((k) => plan[k.id].forEach((id) => { count[id] = (count[id] || 0) + 1; }));
+  check('cada piloto dirige exatamente 2 stints', Object.keys(count).length === 16 && Object.values(count).every((c) => c === 2), JSON.stringify(count));
+
+  let backToBack = false;
+  karts.forEach((k) => { for (let s = 0; s < nStints - 1; s++) if (plan[k.id][s] === plan[k.id][s + 1]) backToBack = true; });
+  check('ninguém pega stints seguidos no mesmo kart', !backToBack);
+
+  const late = [], early = [];
+  karts.forEach((k) => { early.push(score(plan[k.id][0]), score(plan[k.id][1])); late.push(score(plan[k.id][6]), score(plan[k.id][7])); });
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  check('ases nas stints finais (média das últimas 2 > primeiras 2)', avg(late) > avg(early), `late=${avg(late).toFixed(1)} early=${avg(early).toFixed(1)}`);
+
+  const crewAvg = (kid) => { const ids = [...new Set(plan[kid])]; return avg(ids.map(score)); };
+  check('piloto mais forte no kart mais lento (crew A ≥ crew D)', crewAvg('A') >= crewAvg('D'), `A=${crewAvg('A').toFixed(1)} D=${crewAvg('D').toFixed(1)}`);
+}
+
+console.log('\nS18. ALOCAÇÃO: pilotos aptos a pressão vão para as stints finais');
+{
+  const roster = [
+    { id: 'a1', name: 'Ás1', exp: 'A', pressure: true }, { id: 'a2', name: 'Ás2', exp: 'A', pressure: true },
+    { id: 'm1', name: 'Med1', exp: 'B', pressure: false }, { id: 'n1', name: 'Nov1', exp: 'C', pressure: false },
+  ];
+  const karts = [{ id: 'A' }];
+  const plan = suggestAllocation({ roster, karts, nStints: 8 });
+  const isApt = (id) => roster.find((r) => r.id === id)?.pressure;
+  check('a stint final (8ª) é de um piloto apto a pressão', isApt(plan.A[7]), `final=${plan.A[7]}`);
+  check('a penúltima (7ª) também é apto', isApt(plan.A[6]), `pen=${plan.A[6]}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

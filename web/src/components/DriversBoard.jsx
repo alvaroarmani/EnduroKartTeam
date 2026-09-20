@@ -4,6 +4,7 @@ import { useStrategy } from '../hooks/useStrategy.js';
 import { strategyStore } from '../lib/strategyStore.js';
 import { greenPace } from '../lib/strategy-engine.js';
 import { driverRating } from '../lib/decisions.js';
+import { suggestAllocation } from '../lib/allocation.js';
 import { fmt } from '../lib/format.js';
 
 const uid = () => 'p' + Math.random().toString(36).slice(2, 8);
@@ -52,8 +53,20 @@ export default function DriversBoard() {
   // ── ações no store ──
   const addDriver = () => {
     const name = newName.trim(); if (!name) return;
-    strategyStore.set((s) => ({ ...s, roster: [...(s.roster || []), { id: uid(), name, exp: 'B', pressure: false }] }));
+    strategyStore.set((s) => ({ ...s, roster: [...(s.roster || []), { id: uid(), name, exp: 'B', pressure: false, weight: null, note: '' }] }));
     setNewName('');
+  };
+  const setField = (id, patch) => strategyStore.set((s) => ({ ...s, roster: s.roster.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
+  const setTarget = (kg) => strategyStore.update({ targetWeightKg: Number(kg) || 0 });
+  const doSuggest = () => {
+    const hasPlan = st.karts.some((k) => (st.plan?.[k.id] || []).some((x) => x));
+    if (hasPlan && !confirm('Substituir a rotação atual pela sugestão? Você ajusta depois.')) return;
+    const measured = new Map();
+    for (const [id, m] of measuredByDriver) if (m.rating) measured.set(id, Math.max(0, Math.min(100, m.rating.overall + EXP[roster.find((r) => r.id === id)?.exp || 'B'].bump)));
+    const kartPace = new Map();
+    for (const k of st.karts) { if (!k.number) continue; const d = drivers.find((x) => String(x.number) === String(k.number)); const g = d && (greenPace(d.laps) || d.avg); if (g) kartPace.set(k.id, g); }
+    const plan = suggestAllocation({ roster, karts: st.karts, nStints, measured, kartPace });
+    strategyStore.update({ plan });
   };
   const setExp = (id, exp) => strategyStore.set((s) => ({ ...s, roster: s.roster.map((r) => (r.id === id ? { ...r, exp } : r)) }));
   const togglePressure = (id) => strategyStore.set((s) => ({ ...s, roster: s.roster.map((r) => (r.id === id ? { ...r, pressure: !r.pressure } : r)) }));
@@ -75,7 +88,7 @@ export default function DriversBoard() {
     return { measured, overall };
   };
   const pressureZone = (si) => si >= nStints - 2; // últimas 2 stints = pressão
-  const weakInPressure = (r) => r && (r.exp === 'C' || !r.pressure);
+  const weakInPressure = (r) => r && r.exp === 'C'; // novato na pressão = alerta certeiro
 
   return (
     <div>
@@ -143,6 +156,35 @@ export default function DriversBoard() {
         </div>
       </section>
 
+      {/* FICHA & PESAGEM */}
+      <section>
+        <div className="hd"><h2>Ficha & pesagem</h2>
+          <label className="tgt">alvo <input className="mono" type="number" value={st.targetWeightKg} onChange={(e) => setTarget(e.target.value)} /> kg</label>
+        </div>
+        <p className="sub">peso do piloto (macacão/equipado) → <b>lastro</b> necessário para atingir o alvo na pesagem. Disponibilidade guia a rotação.</p>
+        {roster.length === 0 ? <p className="sub">adicione pilotos no plantel acima.</p> : (
+          <table>
+            <thead><tr><th className="l">Piloto</th><th>Peso (kg)</th><th>Lastro</th><th className="l">Disponibilidade / nota</th></tr></thead>
+            <tbody>
+              {roster.map((r) => {
+                const w = r.weight != null && r.weight !== '' ? Number(r.weight) : null;
+                const ball = w != null ? Math.max(0, st.targetWeightKg - w) : null;
+                return (
+                  <tr key={r.id}>
+                    <td className="l">{r.name}</td>
+                    <td><input className="mono wt" type="number" value={r.weight ?? ''} placeholder="—"
+                      onChange={(e) => setField(r.id, { weight: e.target.value === '' ? null : Number(e.target.value) })} /></td>
+                    <td className={'mono' + (ball != null && ball > 0 ? ' ball' : '')}>{ball != null ? '+' + ball.toFixed(1) : '—'}</td>
+                    <td className="l"><input className="note" value={r.note || ''} placeholder="ex.: só à tarde, treinou pouco…"
+                      onChange={(e) => setField(r.id, { note: e.target.value })} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+
       {/* RITMO DOS KARTS */}
       <section>
         <h2>Ritmo dos karts {kartRank.some((r) => r.ours) ? '(nossos)' : '(grid)'}</h2>
@@ -165,8 +207,12 @@ export default function DriversBoard() {
       {/* ROTAÇÃO */}
       <section>
         <div className="hd"><h2>Rotação — {st.karts.length} karts × {nStints} stints</h2>
-          <span className="pz-key">🔥 stints finais = pressão</span></div>
-        <p className="sub">quem dirige cada stint. As <b>últimas 2 stints</b> são zona de pressão: o sistema avisa se cair um novato ou alguém não-apto ali.</p>
+          <div className="hd-r">
+            <span className="pz-key">🔥 stints finais = pressão</span>
+            <button className="btn sm" onClick={doSuggest} disabled={!roster.length}>✨ Sugerir alocação</button>
+          </div></div>
+        <p className="sub">quem dirige cada stint. As <b>últimas 2 stints</b> são zona de pressão: o sistema avisa se cair um novato ou alguém não-apto ali.
+          A <b>sugestão</b> põe ases na pressão, forte no kart lento, ~{Math.round((st.karts.length * nStints) / Math.max(1, roster.length))} stints/piloto e sem stints seguidos.</p>
         <div style={{ overflowX: 'auto' }}>
           <table className="plan">
             <thead>
@@ -228,6 +274,13 @@ export default function DriversBoard() {
         .ros-add{display:flex;gap:8px;margin-bottom:4px}
         .ros-add input{flex:1;padding:7px 10px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:8px;font-size:13px}
         .btn{font-size:13px;padding:7px 14px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;cursor:pointer;font-weight:600}
+        .btn.sm{padding:5px 11px;font-size:12px} .btn:disabled{opacity:.45;cursor:not-allowed}
+        .hd-r{display:flex;gap:10px;align-items:center}
+        .tgt{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+        .tgt input{width:64px;padding:4px 6px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:13px}
+        input.wt{width:74px;padding:5px 7px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:13px;text-align:right}
+        input.note{width:100%;padding:5px 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:12.5px}
+        td.ball{color:var(--s4);font-weight:600}
         .cur-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
         .cur{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
         .cur select,.plan select{padding:6px 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:12.5px;width:100%}
