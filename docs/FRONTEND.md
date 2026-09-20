@@ -25,22 +25,52 @@ Deploy o `dist/` num host estático. Config via `.env` (ver `web/.env.example`):
 ## Estrutura
 ```
 web/src/
-  App.jsx                     abas: Telemetria (FKI) | Estratégia (nossa prova)
-  hooks/useEventData.js       fetch + polling do JSON  ← trocar por WebSocket/Realtime aqui
+  App.jsx                     abas: Cockpit | Batalhas | Pilotos | Timeline | Telemetria | Virtual+Prev | Estratégia
+  hooks/
+    useEventData.js           fetch + polling do JSON  ← trocar por WebSocket/Realtime aqui
+    useStrategy.js            assina o store de estratégia compartilhado (useSyncExternalStore)
+  lib/
+    format.js                 fmt(tempo), cores de série
+    strategyStore.js          ESTADO ÚNICO da prova (config + paradas/kart + relógio + plantel + plano) ← seam p/ WS
+    strategy-engine.js        MOTOR puro: greenPace, estimateStops, computeStrategy (virtual+prev.)
+    analytics.js              DERIVA do histórico: stints, degradação, aproximação, paceRank, timeline
+    race.js                   relógio (elapsedFrom) + folga/janela do box (boxState) + fmtClock
+    decisions.js              DECISÃO por kart (decideKart → o que fazer) + driverRating (habilidade)
+  test/strategy-sim.mjs       SIMULADOR: 16 cenários que validam as indicações (npm run sim)
   components/
     Tiles, PaceChart, PositionChart, ConsistencyTable   (telemetria)
+    TeamCockpit                COCKPIT: 4 karts, stint, folga, próxima ação
+    Battles                    BATALHAS: gap ao vivo, aproximação, alcance
+    DriversBoard               PILOTOS: ranking de ritmo dos karts, plantel, rotação 4×8
+    RaceTimeline               TIMELINE: história reconstruída + alertas acionáveis
+    StrategyEngine             VIRTUAL + PREVISÃO (consome feed + store)
     StrategyPanel              WATCHDOG anti-DQ: relógio + janela do box + paradas/kart + folga
-  lib/format.js               fmt(tempo), cores de série
   styles.css                  paleta (clara/escura) validada
 ```
 
-## Duas telas
-- **Telemetria (FKI):** tiles, **tempo por volta** (faixa competitiva + mediana), **posição por
-  volta** (exata), **ritmo e consistência**. Dados do worker (bateria mais recente do FKI).
-- **Estratégia (nossa prova):** o ponto-chave do plano — relógio da prova, **box abre +10 / fecha
-  −20**, contador de **paradas por kart (x/7)** e a **folga** anti-DQ com alarme
-  (verde/amarelo/vermelho). Estado salvo em `localStorage` (a versão compartilhada no box, via
-  WebSocket, é a fase de produção).
+## Sete telas (por utilidade na pista)
+- **Cockpit** — tela-mãe: nossos 4 karts com stint, paradas x/7, folga anti-DQ, ritmo+rank e a
+  **próxima ação** (🟢 seguir / 🟡 aperta / 🔴 pare já / 🟠 no box). Metrônomo das paradas.
+- **Batalhas** — carro à frente/atrás do foco: gap, taxa de aproximação (s/volta) e "alcança em N
+  voltas". Guard de "ritmo parelho".
+- **Pilotos** — ranking de ritmo dos karts (piloto forte no kart fraco), plantel dos 13 com nível de
+  experiência, e a grade de rotação (4 karts × 8 stints).
+- **Timeline** — história da corrida reconstruída do histórico (paradas, recordes, liderança) +
+  eventos ao vivo (bandeira/líder) + **alertas** (folga crítica, ritmo caindo, bandeira → box).
+- **Telemetria (FKI)**, **Virtual + Previsão**, **Estratégia (watchdog)** — como antes.
+
+> **Tudo derivado de dados que já capturamos.** O `analytics.js` reconstrói stint, degradação,
+> gaps e timeline do histórico volta a volta. O `build-event-data.js` agora repassa também
+> `state` (pista/box), `gap`, `diff` e `categoria` (antes eram descartados).
+
+O **Virtual + Previsão** funde o feed (auto) com as **paradas manuais** por kart (do watchdog, via
+store). Sem karts mapeados → **modo validação** (paradas estimadas por voltas longas); mapeando os
+4 karts ao nº do feed → **modo corrida real**. Ver
+[`CONHECIMENTO-ENDURANCE.md`](CONHECIMENTO-ENDURANCE.md) §5 (P1) para o racional.
+
+> **Store compartilhado:** todas as telas leem/escrevem o MESMO estado (`strategyStore`,
+> persistido em `localStorage`). Mudou parada no watchdog → o virtual reflete na hora. Na produção,
+> sincronizar o box entre os 4 membros troca só o `strategyStore` (WebSocket/Realtime).
 
 ## Próximo passo (live real)
 Trocar `useEventData` (polling de JSON) por **Supabase Realtime** ou um **WebSocket** do backend

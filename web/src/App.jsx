@@ -6,6 +6,11 @@ import PaceChart from './components/PaceChart.jsx';
 import PositionChart from './components/PositionChart.jsx';
 import ConsistencyTable from './components/ConsistencyTable.jsx';
 import StrategyPanel from './components/StrategyPanel.jsx';
+import StrategyEngine from './components/StrategyEngine.jsx';
+import TeamCockpit from './components/TeamCockpit.jsx';
+import Battles from './components/Battles.jsx';
+import DriversBoard from './components/DriversBoard.jsx';
+import RaceTimeline from './components/RaceTimeline.jsx';
 
 function Telemetria() {
   const { data, error, loading, updatedAt } = useEventData();
@@ -62,12 +67,26 @@ function Telemetria() {
 }
 
 const TABS = [
+  { id: 'cockpit', label: 'Cockpit' },
+  { id: 'batalhas', label: 'Batalhas' },
+  { id: 'pilotos', label: 'Pilotos & Kart' },
+  { id: 'timeline', label: 'Timeline' },
   { id: 'telemetria', label: 'Telemetria (FKI)' },
-  { id: 'estrategia', label: 'Estratégia (nossa prova)' },
+  { id: 'motor', label: 'Virtual + Previsão' },
+  { id: 'estrategia', label: 'Estratégia' },
 ];
 
+const HEADERS = {
+  cockpit: ['Cockpit da equipe', 'os 4 karts numa tela: stint, paradas, folga e a próxima ação de cada um.'],
+  batalhas: ['Batalhas & tendências', 'gap ao vivo, taxa de aproximação e quando você alcança/é alcançado.'],
+  pilotos: ['Pilotos & Kart', 'habilidade híbrida (medida + pressão), piloto por kart e rotação — experientes nas stints finais.'],
+  timeline: ['Timeline & alertas', 'a memória da corrida + os alertas acionáveis do momento.'],
+  motor: ['Motor Virtual + Previsão', 'o cérebro: quem está ganhando de verdade e como isso termina.'],
+  estrategia: ['Watchdog de estratégia', '4 karts · 7 paradas obrigatórias · o alarme anti-DQ da prova.'],
+};
+
 export default function App() {
-  const [tab, setTab] = useState('telemetria');
+  const [tab, setTab] = useState('cockpit');
   return (
     <div className="wrap">
       <div className="eyebrow">FDK 100 Milhas Endurance · sistema da equipe</div>
@@ -76,13 +95,19 @@ export default function App() {
           <button key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </nav>
-      {tab === 'telemetria' ? <Telemetria /> : (
+      {tab !== 'telemetria' && (
         <>
-          <h1>Watchdog de estratégia</h1>
-          <p className="subttl">4 karts · 7 paradas obrigatórias · o alarme anti-DQ da prova.</p>
-          <StrategyPanel />
+          <h1>{HEADERS[tab][0]}</h1>
+          <p className="subttl">{HEADERS[tab][1]}</p>
         </>
       )}
+      {tab === 'cockpit' && <TeamCockpit />}
+      {tab === 'batalhas' && <Battles />}
+      {tab === 'pilotos' && <DriversBoard />}
+      {tab === 'timeline' && <RaceTimeline />}
+      {tab === 'telemetria' && <Telemetria />}
+      {tab === 'motor' && <StrategyEngine />}
+      {tab === 'estrategia' && <StrategyPanel />}
       <p className="foot" style={{ marginTop: 18 }}>
         Fonte: captura mylaptime → Supabase/buffer (polling; troca para WebSocket/Realtime isolada em <code>useEventData</code>).
       </p>

@@ -1,27 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useStrategy } from '../hooks/useStrategy.js';
+import { strategyStore, DEFAULTS } from '../lib/strategyStore.js';
 
 /*
  * Ponto-chave do plano de estratégia: WATCHDOG ANTI-DQ.
  * Relógio da prova + janela do box (+10 abre / −20 fecha) + contador de paradas por kart
- * + FOLGA até o box fechar (a métrica-mãe do enduro). Tudo local (localStorage);
- * a versão compartilhada entre o box (WebSocket) é a fase de produção.
+ * + FOLGA até o box fechar (a métrica-mãe do enduro). Estado no store compartilhado
+ * (strategyStore): o motor Virtual/Previsão lê as MESMAS paradas em tempo real.
+ * A versão sincronizada entre o box (WebSocket) troca só o strategyStore.
  */
-const LS = 'ek_strategy_v1';
-const DEFAULTS = {
-  durationMin: 240, boxOpenMin: 10, boxCloseBeforeEndMin: 20,
-  minStopSec: 300, stopCycleSec: 480, totalStops: 7,
-  karts: [
-    { id: 'A', label: 'Kart A', stops: 0 },
-    { id: 'B', label: 'Kart B', stops: 0 },
-    { id: 'C', label: 'Kart C', stops: 0 },
-    { id: 'D', label: 'Kart D', stops: 0 },
-  ],
-  startedAt: null, // epoch ms quando a prova começou (null = não iniciada)
-  pausedElapsed: 0, // segundos acumulados se pausar
-  running: false,
-};
-
-function load() { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(LS) || '{}') }; } catch { return { ...DEFAULTS }; } }
 function fmtClock(sec) {
   if (sec == null || isNaN(sec)) return '—';
   const neg = sec < 0; sec = Math.abs(Math.round(sec));
@@ -31,10 +18,9 @@ function fmtClock(sec) {
 }
 
 export default function StrategyPanel() {
-  const [st, setSt] = useState(load);
+  const [st] = useStrategy();
   const [now, setNow] = useState(Date.now());
   const tick = useRef(null);
-  useEffect(() => { localStorage.setItem(LS, JSON.stringify(st)); }, [st]);
   useEffect(() => { tick.current = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(tick.current); }, []);
 
   const elapsedSec = st.running && st.startedAt ? st.pausedElapsed + (now - st.startedAt) / 1000 : st.pausedElapsed;
@@ -48,11 +34,11 @@ export default function StrategyPanel() {
     ? { txt: 'abre em ' + fmtClock(boxOpenSec - elapsedSec), cls: 'muted' }
     : (elapsedSec > boxCloseSec ? { txt: 'FECHADO', cls: 'crit' } : { txt: 'aberto · fecha em ' + fmtClock(timeToBoxClose), cls: 'ok' });
 
-  function upd(p) { setSt((s) => ({ ...s, ...p })); }
+  function upd(p) { strategyStore.update(p); }
   function start() { upd({ running: true, startedAt: Date.now() }); }
   function pause() { upd({ running: false, pausedElapsed: elapsedSec, startedAt: null }); }
-  function reset() { if (confirm('Zerar relógio e paradas?')) setSt({ ...DEFAULTS, durationMin: st.durationMin, boxOpenMin: st.boxOpenMin, boxCloseBeforeEndMin: st.boxCloseBeforeEndMin, minStopSec: st.minStopSec, stopCycleSec: st.stopCycleSec, totalStops: st.totalStops }); }
-  function setStops(i, d) { setSt((s) => { const k = s.karts.map((x) => ({ ...x })); k[i].stops = Math.max(0, Math.min(s.totalStops, k[i].stops + d)); return { ...s, karts: k }; }); }
+  function reset() { if (confirm('Zerar relógio e paradas?')) strategyStore.set((s) => ({ ...DEFAULTS, karts: s.karts.map((k) => ({ ...k, stops: 0 })), durationMin: s.durationMin, boxOpenMin: s.boxOpenMin, boxCloseBeforeEndMin: s.boxCloseBeforeEndMin, minStopSec: s.minStopSec, stopCycleSec: s.stopCycleSec, totalStops: s.totalStops })); }
+  function setStops(i, d) { strategyStore.set((s) => { const k = s.karts.map((x) => ({ ...x })); k[i].stops = Math.max(0, Math.min(s.totalStops, k[i].stops + d)); return { ...s, karts: k }; }); }
 
   const kartCards = st.karts.map((k, i) => {
     const remaining = st.totalStops - k.stops;

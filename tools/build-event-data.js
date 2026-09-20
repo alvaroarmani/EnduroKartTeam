@@ -46,7 +46,16 @@ const drivers = r.snap.competitors.filter((c) => c.number != null).map((c) => {
   const best = times.length ? Math.min(...times) : null;
   const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
   const sd = times.length > 1 ? Math.round(Math.sqrt(times.reduce((a, b) => a + (b - avg) * (b - avg), 0) / times.length)) : null;
-  return { number: c.number, name: c.name || ('#' + c.number), pos: c.pos, lapCount: c.lapCount, best, avg, sd, laps };
+  // Mantém os campos vivos que o extrator já captura (antes eram descartados):
+  // state = na pista/box, gap = p/ o da frente, diff = p/ líder, categoria.
+  return {
+    number: c.number, name: c.name || ('#' + c.number), pos: c.pos, lapCount: c.lapCount,
+    best, avg, sd, laps,
+    state: c.state != null ? c.state : null,
+    gap: c.gap != null ? c.gap : null,
+    diff: c.diff != null ? c.diff : null,
+    category: c.category != null ? c.category : null,
+  };
 }).sort((a, b) => (a.pos || 99) - (b.pos || 99));
 
 const out = {
