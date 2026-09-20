@@ -22,10 +22,18 @@ Deploy o `dist/` num host estático. Config via `.env` (ver `web/.env.example`):
 - `VITE_DATA_URL` — de onde o app busca os dados (JSON). Default `/event-data.json`.
 - `VITE_POLL_MS` — intervalo de polling (default 10s).
 
+## Casca (sistema)
+`App.jsx` é o shell: **sidebar** com logo + navegação agrupada (Ao vivo · Planejar · Dados),
+colapsável (só ícones) e drawer no celular; **topbar** com título da página, status ao vivo e
+**toggle de tema**. Tema **escuro "cockpit" por padrão + claro**, controlado por `data-theme` no
+`<html>` e persistido em `localStorage`. Toda a paleta é token em `styles.css` — trocar a cor da
+marca = mudar só `--accent`/`--accent-2` (a logo define). O logo hoje é um placeholder (`EK`) fácil
+de trocar por `<img>` no `.brand`.
+
 ## Estrutura
 ```
 web/src/
-  App.jsx                     abas: Cockpit | Batalhas | Pilotos | Timeline | Telemetria | Virtual+Prev | Estratégia
+  App.jsx                     SHELL (sidebar + topbar + tema) + roteamento das telas
   hooks/
     useEventData.js           fetch + polling do JSON  ← trocar por WebSocket/Realtime aqui
     useStrategy.js            assina o store de estratégia compartilhado (useSyncExternalStore)
