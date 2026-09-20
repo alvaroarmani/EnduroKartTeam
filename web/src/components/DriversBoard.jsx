@@ -8,6 +8,7 @@ import { fmt } from '../lib/format.js';
 
 const uid = () => 'p' + Math.random().toString(36).slice(2, 8);
 const EXP = { A: { t: 'experiente', bump: 8 }, B: { t: 'médio', bump: 0 }, C: { t: 'novato', bump: -8 } };
+const ROSTER_MAX = 16; // plantel da equipe
 
 export default function DriversBoard() {
   const { data } = useEventData();
@@ -80,7 +81,7 @@ export default function DriversBoard() {
     <div>
       {/* PLANTEL */}
       <section>
-        <div className="hd"><h2>Plantel ({roster.length}/13)</h2></div>
+        <div className="hd"><h2>Plantel ({roster.length}/{ROSTER_MAX})</h2></div>
         <p className="sub">habilidade <b>híbrida</b>: <b>medido</b> (ritmo+consistência dos dados) + seu <b>nível</b> e a
           aptidão para <b>pressão</b> (quem entra nas stints finais).</p>
         <div className="ros">
@@ -115,7 +116,7 @@ export default function DriversBoard() {
             );
           })}
         </div>
-        {roster.length < 13 && (
+        {roster.length < ROSTER_MAX && (
           <div className="ros-add">
             <input placeholder="nome do piloto" value={newName}
               onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addDriver()} />

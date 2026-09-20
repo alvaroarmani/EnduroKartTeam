@@ -2,7 +2,7 @@
 
 > Pesquisa consolidada (set/2026) sobre como as grandes equipes de endurance decidem, o que
 > monitoram, e as decisões que **ganharam e perderam** corridas. Objetivo: destilar em requisitos
-> concretos para os dashboards da **FDK 100 Milhas** (4h+1volta, 4 karts, 13 pilotos, 7 paradas
+> concretos para os dashboards da **FDK 100 Milhas** (4h+1volta, 4 karts, 16 pilotos, 7 paradas
 > obrigatórias, kart de aluguel/sorteio, DQ-first). Fontes no fim.
 
 ---
@@ -84,7 +84,7 @@ volta, LAP (voltas), DIFF, GAP, histórico volta a volta completo, relógio da p
 - **Paradas obrigatórias cumpridas por kart (0–7)** ← o dado mais importante; destrava virtual,
   previsão e anti-DQ. (Semi-auto: detectar voltas longas como candidatas a parada e pedir
   confirmação.)
-- **Qual dos 13 pilotos está em cada kart agora** (a rotação é nossa; o feed só mostra o kart).
+- **Qual dos 16 pilotos está em cada kart agora** (a rotação é nossa; o feed só mostra o kart).
 - **Peso/lastro em cada pesagem** (100/98 kg) — medição física.
 - **Cronômetro da nossa parada** (os 5:00) — é nosso, não do feed.
 - **Penalidades/advertências** — decisão da direção de prova.
@@ -120,7 +120,7 @@ virtual, previsão de resultado.
 8. **Degradação do stint** (tendência de ritmo) → alerta "kart/piloto caindo, avaliar troca".
 9. **Delta para ritmo-alvo** por stint (feedback ao piloto).
 10. **Alerta de SC/bandeira** na hora + botão "reavaliar box" (janela de ganho curta). → *lei 5.*
-11. **Alocação dos 13 pilotos × 4 karts × 8 stints** respeitando físico (fadiga) e experiência.
+11. **Alocação dos 16 pilotos × 4 karts × 8 stints** respeitando físico (fadiga) e experiência.
 
 ### Princípio de arquitetura (inegociável)
 **As funções críticas não podem depender do feed.** Relógio, watchdog, cronômetro de parada,

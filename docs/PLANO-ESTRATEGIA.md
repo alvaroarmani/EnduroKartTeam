@@ -17,7 +17,7 @@ fácil "estrategizar demais" no lugar errado. As alavancas **reais**, em ordem d
    errado, ou **não fechar as 7 paradas antes do box fechar (T−20)**. Um time que só garante
    "7 paradas válidas + peso legal + kart certo" já passa metade do grid que se autoelimina.
 2. **Quando** disparar cada parada (espaçamento + proteger o prazo T−20 + reagir a bandeira).
-3. **Quem** pilota **qual** stint (13 pilotos × 4 karts × 8 stints; ases nos momentos certos).
+3. **Quem** pilota **qual** stint (16 pilotos × 4 karts × 8 stints; ases nos momentos certos).
 4. **Reagir à variância** (kart ruim sorteado, piloto cansando, bandeira vermelha, quebra, peso).
 
 Conclusão crítica: o sistema **não** é um otimizador de décimos. É um **painel de disciplina +
@@ -67,9 +67,9 @@ O sistema deve, a cada momento, responder e/ou alarmar:
 ## 4. Módulos do sistema (o schematic para aprovar)
 
 ### A) Pré-prova (planejamento)
-1. **Elenco & tiers** — cadastro dos 13 pilotos: força/experiência (tier), peso de macacão,
+1. **Elenco & tiers** — cadastro dos 16 pilotos: força/experiência (tier), peso de macacão,
    notas (melhor tipo de stint, largada Le Mans, chuva emocional/fadiga).
-2. **Planejador de alocação** — grade **4 karts × 8 stints = 32 vagas**; distribui os 13 pilotos
+2. **Planejador de alocação** — grade **4 karts × 8 stints = 32 vagas**; distribui os 16 pilotos
    respeitando "não emendar stints"; posiciona **ases nos momentos cruciais** (stint 1 = quali +
    largada Le Mans; stint 8 = chegada; stints de recuperação). Decisão a registrar: **ambição
    por kart** (espalhar ases nos 4 vs concentrar num kart "A").

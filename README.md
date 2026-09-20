@@ -1,7 +1,7 @@
 # EnduroKart — Estratégia, cronometragem e telemetria
 
 Sistema de apoio ao estrategista da equipe na **FDK 100 Milhas Endurance** (4h + 1 volta,
-17/10/2026 · Jardim Camburi/ES · 4 karts, 13 pilotos). Extrai a cronometragem ao vivo do
+17/10/2026 · Jardim Camburi/ES · 4 karts, 16 pilotos). Extrai a cronometragem ao vivo do
 **mylaptime**, grava num banco (**Supabase/Postgres**) e gera **dashboards** de telemetria.
 
 > Entrada rápida: [`docs/ONDE-PARAMOS.md`](docs/ONDE-PARAMOS.md) e [`docs/RELATORIO-NOITE.md`](docs/RELATORIO-NOITE.md).
