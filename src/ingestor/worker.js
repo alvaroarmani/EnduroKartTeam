@@ -26,7 +26,45 @@ const { buildSampleRows, orderEvents } = require('./transform');
 const { startStatusServer } = require('./status-server');
 
 // Estado ao vivo exposto pelo servidor de status (se PORT setado).
-const state = { paired: false, pairingCode: null, cycles: 0, activeEvents: 0, samples: 0, lastEvent: null, status: '—', updatedAt: Date.now() };
+// events = índice (todos os online) · eventData = dados por evento (id -> {event,drivers}).
+const state = { paired: false, pairingCode: null, cycles: 0, activeEvents: 0, samples: 0, lastEvent: null, status: '—', updatedAt: Date.now(), events: [], eventData: {}, focus: [] };
+
+// id estável e ÚNICO por evento = pista + bateria (só o nome colide: vários "Corrida").
+function slug(s) {
+  return String(s || 'evento').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'evento';
+}
+function eventId(track, name) { return slug((track || '') + ' ' + (name || '')); }
+
+// Normaliza um snapshot capturado para o formato que o frontend consome.
+function toEventData(meta, snap) {
+  const drivers = (snap.competitors || []).filter((c) => c.number != null).map((c) => {
+    const laps = (c.lapHistory || []).filter((l) => l.n != null && l.ms != null)
+      .map((l) => ({ n: l.n, ms: l.ms, pos: l.pos != null ? l.pos : null })).sort((a, b) => a.n - b.n);
+    const t = laps.map((l) => l.ms);
+    const best = t.length ? Math.min(...t) : null;
+    const avg = t.length ? Math.round(t.reduce((a, b) => a + b, 0) / t.length) : null;
+    const sd = t.length > 1 ? Math.round(Math.sqrt(t.reduce((a, b) => a + (b - avg) * (b - avg), 0) / t.length)) : null;
+    return { number: c.number, name: c.name || ('#' + c.number), pos: c.pos, lapCount: c.lapCount, best, avg, sd, laps, state: c.state ?? null, gap: c.gap ?? null, diff: c.diff ?? null, category: c.category ?? null };
+  }).sort((a, b) => (a.pos || 99) - (b.pos || 99));
+  return {
+    generatedAt: new Date().toISOString(),
+    event: { track: meta.track, name: meta.name, uid: meta.mylaptime_uid, capturedAt: Date.now(), raceClock: snap.raceClock, flag: snap.flag },
+    drivers,
+  };
+}
+
+// índice (todos os online) a partir da lista gate-free, preservando o que já foi capturado.
+function indexFromLive(live) {
+  return (live || []).map((e) => {
+    const id = eventId(e.track, e.name);
+    const prev = state.events.find((x) => x.id === id) || {};
+    return { id, name: e.name || e.track, track: e.track, live: true, ...('karts' in prev ? { karts: prev.karts, laps: prev.laps, flag: prev.flag, capturedAt: prev.capturedAt, dataUrl: prev.dataUrl } : {}) };
+  });
+}
+async function refreshIndex(session) {
+  try { state.events = indexFromLive(await session.listEvents()); state.updatedAt = Date.now(); } catch (e) {}
+}
 
 function log(...a) { console.log(new Date().toISOString(), ...a); }
 function banner(msg) { const line = '='.repeat(Math.min(60, msg.length + 4)); console.log('\n' + line + '\n  ' + msg + '\n' + line + '\n'); }
@@ -70,12 +108,22 @@ async function healthCheck(session) {
 
 async function cycle(session) {
   let live = await session.listEvents();
-  if (CONFIG.EVENT_FILTER.length) {
+  // índice de TODOS os online (gate-free) — a tela Eventos do frontend lista isto.
+  state.events = indexFromLive(live);
+  // captura só o FOCO (eventos analisando + fixados, vindos do frontend via /focus).
+  // Sem foco: cai no EVENT_FILTER (uso via CLI); sem nada, não captura (só lista).
+  const focus = new Set(state.focus || []);
+  let sel;
+  if (focus.size) {
+    sel = (live || []).filter((e) => focus.has(eventId(e.track, e.name)));
+  } else if (CONFIG.EVENT_FILTER.length) {
     const flt = CONFIG.EVENT_FILTER.map((s) => s.toLowerCase());
-    live = live.filter((e) => { const hay = ((e.track || '') + ' ' + (e.name || '')).toLowerCase(); return flt.some((f) => hay.includes(f)); });
+    sel = (live || []).filter((e) => { const hay = ((e.track || '') + ' ' + (e.name || '')).toLowerCase(); return flt.some((f) => hay.includes(f)); });
+  } else {
+    sel = [];
   }
-  const events = orderEvents(live, { priorityTracks: CONFIG.PRIORITY_TRACKS, maxPerCycle: CONFIG.MAX_EVENTS_PER_CYCLE });
-  log(`ciclo: ${events.length} evento(s)` + (CONFIG.EVENT_FILTER.length ? ` [filtro: ${CONFIG.EVENT_FILTER.join(', ')}]` : ' ativo(s)'));
+  const events = orderEvents(sel, { priorityTracks: CONFIG.PRIORITY_TRACKS, maxPerCycle: CONFIG.MAX_EVENTS_PER_CYCLE });
+  log(`ciclo: ${(live || []).length} online · capturando ${events.length}` + (focus.size ? ` [foco: ${state.focus.join(', ')}]` : CONFIG.EVENT_FILTER.length ? ` [filtro: ${CONFIG.EVENT_FILTER.join(', ')}]` : ' [sem foco — selecione na tela Eventos]'));
   state.cycles++; state.activeEvents = events.length; state.updatedAt = Date.now();
   const seenUids = [];
   for (const ev of events) {
@@ -85,6 +133,15 @@ async function cycle(session) {
     const saved = await persist(res.meta, res.snapshot).catch((e) => { log('  erro persist:', e.message); });
     if (res.meta.mylaptime_uid) seenUids.push(res.meta.mylaptime_uid);
     if (saved) state.samples += saved.samples;
+    // guarda os dados normalizados do evento + enriquece o índice (o frontend serve /events/:id)
+    try {
+      const id = eventId(res.meta.track || ev.track, res.meta.name || ev.name);
+      const data = toEventData(res.meta, res.snapshot);
+      state.eventData[id] = data;
+      const enrich = { karts: data.drivers.length, laps: data.drivers.reduce((m, d) => Math.max(m, d.lapCount || 0), 0), flag: res.snapshot.flag && res.snapshot.flag.state, capturedAt: Date.now(), dataUrl: '/events/' + id };
+      const idx = state.events.find((x) => x.id === id);
+      if (idx) Object.assign(idx, enrich); else state.events.push({ id, name: res.meta.name, track: res.meta.track, live: true, ...enrich });
+    } catch (e) {}
     state.lastEvent = `${res.meta.track || ev.track} · ${res.meta.name || ev.name}`; state.updatedAt = Date.now();
     log(`  [${ev.index}] ${res.meta.track || ev.track} · ${res.meta.name || ev.name} · ${nComp} comp` + (saved ? ` · +${saved.samples}s/+${saved.laps}v` : ''));
     await session.page.waitForTimeout(CONFIG.BETWEEN_EVENTS_MS);
@@ -102,10 +159,19 @@ async function main() {
   const session = new MyLapSession();
   await session.launch();
 
-  if (CONFIG.PORT) startStatusServer(CONFIG.PORT, () => state, () => session.screenshotQR());
+  const setFocus = (ids) => {
+    state.focus = Array.isArray(ids) ? ids.map(String) : [];
+    log('foco atualizado (capturando):', state.focus.join(', ') || '(nenhum — selecione na tela Eventos)');
+    state.updatedAt = Date.now();
+  };
+  if (CONFIG.PORT) startStatusServer(CONFIG.PORT, () => state, () => session.screenshotQR(), setFocus);
 
   banner('PAREAMENTO — abra o app MyLapTime (Carreira) e escaneie/cole o código abaixo'
     + (CONFIG.PORT ? ` · ou abra http://localhost:${CONFIG.PORT}` : ''));
+  // lista os eventos online (gate-free) UMA vez antes do pareamento, pra já escolher o foco.
+  // (não dá pra ficar navegando durante o waitForPairing — ele dirige a mesma página.)
+  await refreshIndex(session);
+  log(`eventos online agora: ${state.events.length}` + (state.events.length ? ' — ' + state.events.map((e) => e.name).join(' | ') : ''));
   const paired = await session.waitForPairing((code) => {
     banner('CÓDIGO DE PAREAMENTO: ' + code);
     state.pairingCode = code; state.updatedAt = Date.now();

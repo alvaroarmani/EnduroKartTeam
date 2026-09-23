@@ -19,20 +19,24 @@ class MyLapSession {
   constructor() { this.browser = null; this.ctx = null; this.page = null; this.paired = false; }
 
   async launch() {
+    // Perfil PERSISTENTE (userDataDir): cookies/localStorage/IndexedDB sobrevivem ao
+    // restart, então o pareamento/login do mylaptime fica salvo — pareia 1× e pronto.
+    const userDataDir = CONFIG.USER_DATA_DIR || path.join(process.cwd(), CONFIG.DATA_DIR || 'data', 'browser-profile');
+    try { fs.mkdirSync(userDataDir, { recursive: true }); } catch (e) {}
     const launchOpts = {
       headless: CONFIG.HEADLESS,
+      locale: 'pt-BR', timezoneId: 'America/Sao_Paulo',
+      viewport: { width: 1280, height: 900 },
       args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'],
     };
     if (CONFIG.BROWSER_CHANNEL) launchOpts.channel = CONFIG.BROWSER_CHANNEL; // 'chrome' | 'msedge' do sistema
-    this.browser = await chromium.launch(launchOpts);
-    this.ctx = await this.browser.newContext({
-      locale: 'pt-BR', timezoneId: 'America/Sao_Paulo',
-      viewport: { width: 1280, height: 900 },
-    });
-    this.page = await this.ctx.newPage();
-    this.page.setDefaultTimeout(CONFIG.NAV_TIMEOUT_MS);
+    this.ctx = await chromium.launchPersistentContext(userDataDir, launchOpts);
+    this.browser = this.ctx.browser(); // pode ser null em contexto persistente — usamos ctx p/ fechar
+    this.userDataDir = userDataDir;
     // Define window.MyLapExtractor em toda navegação de documento.
     await this.ctx.addInitScript({ content: EXTRACTOR_SRC });
+    this.page = this.ctx.pages()[0] || await this.ctx.newPage();
+    this.page.setDefaultTimeout(CONFIG.NAV_TIMEOUT_MS);
     await this.page.goto(LIVE_URL, { waitUntil: 'domcontentloaded' });
     await this.page.waitForTimeout(2500);
     await this.acceptTerms();
@@ -94,7 +98,7 @@ class MyLapSession {
       if (Date.now() - lastBeat > 10000) { lastBeat = Date.now(); log(`aguardando pareamento… código atual=${lastCode ? lastCode.slice(0, 8) + '…' : '(?)'} · (crie data/paired.flag para forçar)`); }
       if (Date.now() - lastOpenTest > 30000) {
         lastOpenTest = Date.now();
-        const opened = await this._tryOpenFirstEvent();
+        const opened = await this._tryOpenFirstEvent().catch(() => false);
         if (opened) { this.paired = true; log('pareado (auto-detecção)! board acessível.'); await this.backToList().catch(() => {}); return true; }
       }
       await this.page.waitForTimeout(2500);
@@ -119,24 +123,27 @@ class MyLapSession {
 
   // Abre o evento de índice `index`: card -> (detalhe) -> "Assistir" -> board.
   async _openEventByIndex(index) {
-    await this.dismissModals();
-    const clicked = await this.page.evaluate((i) => {
-      const cards = document.querySelectorAll('.lt-event-card'); if (!cards[i]) return false; cards[i].click(); return true;
-    }, index).catch(() => false);
-    if (!clicked) return false;
-    // espera aparecer o board OU o botão "Assistir"
     try {
-      await this.page.waitForFunction(() =>
-        !!document.querySelector('.lt-competitors-list') ||
-        [...document.querySelectorAll('button,a,div,span')].some((e) => /^(play_arrow\s*)?assistir$/i.test((e.textContent || '').replace(/\s+/g, ' ').trim())),
-        { timeout: 8000 });
-    } catch (e) { return false; }
-    if (!(await this.page.$('.lt-competitors-list'))) {
       await this.dismissModals();
-      await this._clickAssistir();
-    }
-    try { await this.page.waitForSelector('.lt-competitors-list', { timeout: 8000 }); return true; }
-    catch (e) { return false; }
+      const clicked = await this.page.evaluate((i) => {
+        const cards = document.querySelectorAll('.lt-event-card'); if (!cards[i]) return false; cards[i].click(); return true;
+      }, index).catch(() => false);
+      if (!clicked) return false;
+      // espera aparecer o board OU o botão "Assistir"
+      try {
+        await this.page.waitForFunction(() =>
+          !!document.querySelector('.lt-competitors-list') ||
+          [...document.querySelectorAll('button,a,div,span')].some((e) => /^(play_arrow\s*)?assistir$/i.test((e.textContent || '').replace(/\s+/g, ' ').trim())),
+          { timeout: 8000 });
+      } catch (e) { return false; }
+      const hasBoard = await this.page.$('.lt-competitors-list').catch(() => null);
+      if (!hasBoard) {
+        await this.dismissModals();
+        await this._clickAssistir();
+      }
+      try { await this.page.waitForSelector('.lt-competitors-list', { timeout: 8000 }); return true; }
+      catch (e) { return false; }
+    } catch (e) { return false; } // navegação/reconexão no meio não pode derrubar o worker
   }
 
   // Garante estar na lista de eventos. Do board/detalhe, clica "Voltar" até ver os cards.
@@ -276,7 +283,7 @@ class MyLapSession {
 
   async screenshotQR() { try { return await this.page.screenshot({ type: 'png' }); } catch (e) { return null; } }
 
-  async close() { try { await this.browser && this.browser.close(); } catch (e) {} }
+  async close() { try { if (this.ctx) await this.ctx.close(); else if (this.browser) await this.browser.close(); } catch (e) {} }
 }
 
 module.exports = { MyLapSession, LIVE_URL };

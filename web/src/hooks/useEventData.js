@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
+import { useStrategy } from './useStrategy.js';
 
 /*
- * Fonte de dados do dashboard. Por ora: fetch + polling de um JSON
- * (window.EV via <script> OU um endpoint JSON). Trocar por Supabase Realtime /
- * WebSocket depois muda SÓ este arquivo.
+ * Dados do EVENTO EM ANÁLISE. A URL vem do evento ativo selecionado na tela Eventos
+ * (strategyStore.activeEvent.dataUrl); sem seleção, cai no default VITE_DATA_URL.
+ * Trocar por Supabase Realtime / WebSocket depois muda SÓ este arquivo.
  */
 const DATA_URL = import.meta.env.VITE_DATA_URL || '/event-data.json';
 const POLL_MS = Number(import.meta.env.VITE_POLL_MS || 10000);
 
 export function useEventData() {
+  const [st] = useStrategy();
+  const dataUrl = st.activeEvent?.dataUrl || DATA_URL;
   const [state, setState] = useState({ data: null, error: null, loading: true, updatedAt: null });
   const timer = useRef(null);
 
   useEffect(() => {
     let alive = true;
+    setState((s) => ({ ...s, loading: true }));
     async function tick() {
       try {
-        const res = await fetch(DATA_URL, { cache: 'no-store' });
+        const res = await fetch(dataUrl, { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         // aceita tanto JSON puro quanto "window.EV={...};"
@@ -31,7 +35,7 @@ export function useEventData() {
     tick();
     timer.current = setInterval(tick, POLL_MS);
     return () => { alive = false; clearInterval(timer.current); };
-  }, []);
+  }, [dataUrl]);
 
   return state;
 }

@@ -77,6 +77,10 @@ body{background:var(--bg); color:var(--ink);
 .topbar .page-t{font-size:16px; font-weight:700; letter-spacing:-.01em;}
 .topbar .page-s{font-size:12.5px; color:var(--muted);}
 .top-right{margin-left:auto; display:flex; align-items:center; gap:8px;}
+.ev-switch{max-width:220px; font:13px system-ui; padding:6px 10px; border:1px solid var(--border);
+  background:var(--surface); color:var(--ink); border-radius:9px; cursor:pointer;}
+.ev-switch:hover{border-color:var(--border-2);}
+@media (max-width:860px){ .ev-switch{max-width:130px;} }
 .content{padding:22px 26px 40px; max-width:1140px; width:100%; margin:0 auto;}
 
 .icon-btn{width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--surface);
