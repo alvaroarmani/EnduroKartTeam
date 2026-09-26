@@ -23,6 +23,8 @@ export const DEFAULTS = {
   current: {},       // piloto atual por kart: { [kartId]: driverId }
   activeEvent: null, // evento em análise: { id, name, dataUrl }
   pinnedEventIds: [],// eventos fixados (worker segue capturando)
+  pit: {},           // parada em andamento por kart: { [kartId]: { startedAt, drawnKart, plate, sensor, weighed, ballastOut } }
+  stopsLog: [],      // paradas concluídas: { kartId, endedAt, durationMs, drawnKart, valid, penalty }
 };
 
 function read() {
@@ -41,6 +43,8 @@ function read() {
     st.current = st.current && typeof st.current === 'object' ? st.current : {};
     st.activeEvent = st.activeEvent && typeof st.activeEvent === 'object' ? st.activeEvent : null;
     st.pinnedEventIds = Array.isArray(st.pinnedEventIds) ? st.pinnedEventIds : [];
+    st.pit = st.pit && typeof st.pit === 'object' ? st.pit : {};
+    st.stopsLog = Array.isArray(st.stopsLog) ? st.stopsLog : [];
     return st;
   } catch { return { ...DEFAULTS }; }
 }

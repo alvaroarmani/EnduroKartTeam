@@ -13,6 +13,7 @@ import DriversBoard from './components/DriversBoard.jsx';
 import RaceTimeline from './components/RaceTimeline.jsx';
 import EventsScreen from './components/EventsScreen.jsx';
 import KartIntel from './components/KartIntel.jsx';
+import PitStops from './components/PitStops.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* ---------- ícones (stroke, herdam currentColor) ---------- */
@@ -25,6 +26,7 @@ const P = {
   flag: <><path d="M6 21V4" /><path d="M6 4h11l-2.4 4L17 12H6" /></>,
   activity: <><path d="M3 12h4l3 8 4-16 3 8h4" /></>,
   layers: <><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></>,
+  stop: <><circle cx="12" cy="13" r="8" /><path d="M12 13V9" /><path d="M9.5 3h5" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" /></>,
   moon: <><path d="M20 14a8 8 0 11-9-11 6 6 0 009 11z" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
@@ -37,6 +39,7 @@ const Icon = ({ name }) => (
 const NAV = [
   { group: 'Ao vivo', items: [
     { id: 'cockpit', label: 'Cockpit', icon: 'gauge' },
+    { id: 'box', label: 'Box', icon: 'stop' },
     { id: 'batalhas', label: 'Batalhas', icon: 'swords' },
     { id: 'timeline', label: 'Timeline', icon: 'timeline' },
   ] },
@@ -53,6 +56,7 @@ const NAV = [
 ];
 const HEADERS = {
   cockpit: ['Cockpit', 'os 4 karts numa tela: stint, paradas, folga e a próxima ação de cada um.'],
+  box: ['Box — checklist de parada', 'cronômetro com as zonas 4:55/5:00, kart sorteado, placa, sensor, pesagem e lastro.'],
   batalhas: ['Batalhas & tendências', 'gap ao vivo, aproximação e quando você alcança / é alcançado.'],
   timeline: ['Timeline & alertas', 'a memória da corrida + os alertas acionáveis do momento.'],
   pilotos: ['Pilotos & Kart', 'habilidade híbrida, pesagem e rotação — ases nas stints finais.'],
@@ -117,7 +121,7 @@ function StatusPill() {
 }
 
 const PAGES = {
-  cockpit: TeamCockpit, batalhas: Battles, timeline: RaceTimeline,
+  cockpit: TeamCockpit, box: PitStops, batalhas: Battles, timeline: RaceTimeline,
   pilotos: DriversBoard, motor: StrategyEngine, estrategia: StrategyPanel,
   eventos: EventsScreen, karts: KartIntel, telemetria: Telemetria,
 };
