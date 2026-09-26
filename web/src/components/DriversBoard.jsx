@@ -161,34 +161,50 @@ export default function DriversBoard() {
         <div className="hd"><h2>Ficha & pesagem</h2>
           <label className="tgt">alvo <input className="mono" type="number" value={st.targetWeightKg} onChange={(e) => setTarget(e.target.value)} /> kg</label>
         </div>
-        <p className="sub">peso do piloto (macacão/equipado) → <b>lastro</b> necessário para atingir o alvo na pesagem. Disponibilidade guia a rotação.</p>
-        {roster.length === 0 ? <p className="sub">adicione pilotos no plantel acima.</p> : (
-          <table>
-            <thead><tr><th className="l">Piloto</th><th>Peso (kg)</th><th>Lastro</th><th className="l">Disponibilidade / nota</th></tr></thead>
-            <tbody>
-              {roster.map((r) => {
-                const w = r.weight != null && r.weight !== '' ? Number(r.weight) : null;
-                const ball = w != null ? Math.max(0, st.targetWeightKg - w) : null;
-                return (
-                  <tr key={r.id}>
-                    <td className="l">{r.name}</td>
-                    <td><input className="mono wt" type="number" value={r.weight ?? ''} placeholder="—"
-                      onChange={(e) => setField(r.id, { weight: e.target.value === '' ? null : Number(e.target.value) })} /></td>
-                    <td className={'mono' + (ball != null && ball > 0 ? ' ball' : '')}>{ball != null ? '+' + ball.toFixed(1) : '—'}</td>
-                    <td className="l"><input className="note" value={r.note || ''} placeholder="ex.: só à tarde, treinou pouco…"
-                      onChange={(e) => setField(r.id, { note: e.target.value })} /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        <p className="sub">peso do piloto <b>equipado</b> (com macacão) → lastro para atingir os {st.targetWeightKg} kg.
+          Regra FDK: a casa fornece <b>até 25 kg</b>; abaixo disso é <b>lastro pessoal</b>. Pesagem a cada
+          parada (piloto que saiu). <b>&lt;100 = −2 voltas · &lt;98 = DQ.</b></p>
+        {(() => {
+          const PROVIDED = 25, DQ = 98;
+          const needPersonal = roster.filter((r) => { const w = Number(r.weight); return r.weight != null && r.weight !== '' && (st.targetWeightKg - w) > PROVIDED; });
+          return (<>
+            {needPersonal.length > 0 && (
+              <div className="ficha-alert">⚠ <b>{needPersonal.length}</b> piloto(s) precisam de <b>lastro pessoal</b> (os 25 kg da casa não bastam): {needPersonal.map((r) => r.name).join(', ')}.</div>
+            )}
+            {roster.length === 0 ? <p className="sub">adicione pilotos no plantel acima.</p> : (
+              <table>
+                <thead><tr><th className="l">Piloto</th><th>Peso equip.</th><th>Lastro p/ {st.targetWeightKg}</th><th>Fornecido</th><th>Pessoal</th><th className="l">Nota</th></tr></thead>
+                <tbody>
+                  {roster.map((r) => {
+                    const w = r.weight != null && r.weight !== '' ? Number(r.weight) : null;
+                    const need = w != null ? Math.max(0, st.targetWeightKg - w) : null;
+                    const forn = need != null ? Math.min(PROVIDED, need) : null;
+                    const pess = need != null ? Math.max(0, need - PROVIDED) : null;
+                    return (
+                      <tr key={r.id}>
+                        <td className="l">{r.name}{w != null && w < DQ ? <em className="tag dq" title="peso equipado abaixo de 98 — depende 100% do lastro">&lt;98</em> : null}</td>
+                        <td><input className="mono wt" type="number" value={r.weight ?? ''} placeholder="—"
+                          onChange={(e) => setField(r.id, { weight: e.target.value === '' ? null : Number(e.target.value) })} /></td>
+                        <td className="mono">{need != null ? '+' + need.toFixed(1) : '—'}</td>
+                        <td className="mono">{forn != null ? forn.toFixed(1) : '—'}</td>
+                        <td className={'mono' + (pess ? ' ball' : '')}>{pess != null ? (pess > 0 ? '+' + pess.toFixed(1) : '0') : '—'}</td>
+                        <td className="l"><input className="note" value={r.note || ''} placeholder="ex.: só à tarde…"
+                          onChange={(e) => setField(r.id, { note: e.target.value })} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </>);
+        })()}
       </section>
 
       {/* RITMO DOS KARTS */}
       <section>
         <h2>Ritmo dos karts {kartRank.some((r) => r.ours) ? '(nossos)' : '(grid)'}</h2>
-        <p className="sub">kart de aluguel varia — ponha o piloto mais forte no kart mais lento.</p>
+        <p className="sub">o kart é <b>sorteado</b> a cada parada — não dá pra pré-escolher. Isto é <b>inteligência</b>:
+          saber qual kart é lento explica o stint e ajuda a decidir troca por quebra. (Histórico por kart na aba <b>Karts</b>.)</p>
         <table>
           <thead><tr><th>Rank</th><th className="l">Kart</th><th>Ritmo verde</th><th>Consist.</th></tr></thead>
           <tbody>
@@ -281,6 +297,8 @@ export default function DriversBoard() {
         input.wt{width:74px;padding:5px 7px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:13px;text-align:right}
         input.note{width:100%;padding:5px 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:12.5px}
         td.ball{color:var(--s4);font-weight:600}
+        .ficha-alert{background:color-mix(in srgb,var(--s4) 15%,transparent);border:1px solid var(--s4);border-radius:9px;padding:9px 12px;font-size:13px;margin-bottom:10px}
+        .tag.dq{font-style:normal;font-size:9.5px;font-weight:700;color:#fff;background:var(--live);padding:1px 5px;border-radius:9px;margin-left:6px}
         .cur-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
         .cur{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
         .cur select,.plan select{padding:6px 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);border-radius:6px;font-size:12.5px;width:100%}

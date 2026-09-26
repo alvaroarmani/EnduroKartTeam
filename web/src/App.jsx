@@ -12,6 +12,7 @@ import Battles from './components/Battles.jsx';
 import DriversBoard from './components/DriversBoard.jsx';
 import RaceTimeline from './components/RaceTimeline.jsx';
 import EventsScreen from './components/EventsScreen.jsx';
+import KartIntel from './components/KartIntel.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* ---------- ícones (stroke, herdam currentColor) ---------- */
@@ -46,6 +47,7 @@ const NAV = [
   ] },
   { group: 'Dados', items: [
     { id: 'eventos', label: 'Eventos', icon: 'layers' },
+    { id: 'karts', label: 'Karts', icon: 'target' },
     { id: 'telemetria', label: 'Telemetria', icon: 'activity' },
   ] },
 ];
@@ -57,6 +59,7 @@ const HEADERS = {
   motor: ['Virtual + Previsão', 'quem está ganhando de verdade e como isso termina.'],
   estrategia: ['Estratégia', '4 karts · 7 paradas obrigatórias · o alarme anti-DQ da prova.'],
   eventos: ['Eventos', 'todos os eventos online — escolha qual manter em análise.'],
+  karts: ['Karts & prep 15 dias', 'ritmo por kart em Jardim Camburi — qual kart sorteado é lento/rápido.'],
   telemetria: ['Telemetria', 'ritmo, posição e consistência do evento em análise.'],
 };
 
@@ -116,7 +119,7 @@ function StatusPill() {
 const PAGES = {
   cockpit: TeamCockpit, batalhas: Battles, timeline: RaceTimeline,
   pilotos: DriversBoard, motor: StrategyEngine, estrategia: StrategyPanel,
-  eventos: EventsScreen, telemetria: Telemetria,
+  eventos: EventsScreen, karts: KartIntel, telemetria: Telemetria,
 };
 
 export default function App() {
