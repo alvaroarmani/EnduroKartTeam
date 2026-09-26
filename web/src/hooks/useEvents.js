@@ -20,6 +20,11 @@ export function resolveDataUrl(dataUrl) {
   try { return new URL(dataUrl, new URL(EVENTS_URL, window.location.href)).href; } catch { return dataUrl; }
 }
 
+/* URL de um caminho no WORKER (mesma origem do endpoint de eventos). Ex.: workerUrl('/health'). */
+export function workerUrl(path = '') {
+  try { return new URL(path, new URL(EVENTS_URL, window.location.href)).href; } catch { return path; }
+}
+
 /*
  * Manda o FOCO (ids dos eventos analisando + fixados) pro worker: ele passa a capturar
  * só esses. Vai para <origem do EVENTS_URL>/focus. Sem worker (fixture estático) falha

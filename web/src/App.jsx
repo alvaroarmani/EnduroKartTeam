@@ -14,6 +14,7 @@ import RaceTimeline from './components/RaceTimeline.jsx';
 import EventsScreen from './components/EventsScreen.jsx';
 import KartIntel from './components/KartIntel.jsx';
 import PitStops from './components/PitStops.jsx';
+import PairScreen from './components/PairScreen.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* ---------- ícones (stroke, herdam currentColor) ---------- */
@@ -27,6 +28,7 @@ const P = {
   activity: <><path d="M3 12h4l3 8 4-16 3 8h4" /></>,
   layers: <><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></>,
   stop: <><circle cx="12" cy="13" r="8" /><path d="M12 13V9" /><path d="M9.5 3h5" /></>,
+  link: <><path d="M9 15l6-6" /><path d="M11 6l1-1a4 4 0 016 6l-1 1" /><path d="M13 18l-1 1a4 4 0 01-6-6l1-1" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" /></>,
   moon: <><path d="M20 14a8 8 0 11-9-11 6 6 0 009 11z" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
@@ -49,6 +51,7 @@ const NAV = [
     { id: 'estrategia', label: 'Estratégia', icon: 'flag' },
   ] },
   { group: 'Dados', items: [
+    { id: 'parear', label: 'Parear', icon: 'link' },
     { id: 'eventos', label: 'Eventos', icon: 'layers' },
     { id: 'karts', label: 'Karts', icon: 'target' },
     { id: 'telemetria', label: 'Telemetria', icon: 'activity' },
@@ -62,6 +65,7 @@ const HEADERS = {
   pilotos: ['Pilotos & Kart', 'habilidade híbrida, pesagem e rotação — ases nas stints finais.'],
   motor: ['Virtual + Previsão', 'quem está ganhando de verdade e como isso termina.'],
   estrategia: ['Estratégia', '4 karts · 7 paradas obrigatórias · o alarme anti-DQ da prova.'],
+  parear: ['Parear', 'conecte o worker ao mylaptime (escaneie/cole o código no app MyLapTime).'],
   eventos: ['Eventos', 'todos os eventos online — escolha qual manter em análise.'],
   karts: ['Karts & prep 15 dias', 'ritmo por kart em Jardim Camburi — qual kart sorteado é lento/rápido.'],
   telemetria: ['Telemetria', 'ritmo, posição e consistência do evento em análise.'],
@@ -123,7 +127,7 @@ function StatusPill() {
 const PAGES = {
   cockpit: TeamCockpit, box: PitStops, batalhas: Battles, timeline: RaceTimeline,
   pilotos: DriversBoard, motor: StrategyEngine, estrategia: StrategyPanel,
-  eventos: EventsScreen, karts: KartIntel, telemetria: Telemetria,
+  parear: PairScreen, eventos: EventsScreen, karts: KartIntel, telemetria: Telemetria,
 };
 
 export default function App() {
