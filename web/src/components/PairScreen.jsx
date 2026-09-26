@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { workerUrl } from '../hooks/useEvents.js';
 
 /*
@@ -10,7 +11,7 @@ import { workerUrl } from '../hooks/useEvents.js';
 export default function PairScreen() {
   const [h, setH] = useState(null);
   const [err, setErr] = useState(null);
-  const [bust, setBust] = useState(Date.now());
+  const [qr, setQr] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -19,9 +20,17 @@ export default function PairScreen() {
       .then((j) => { if (alive) { setH(j); setErr(null); } })
       .catch((e) => { if (alive) setErr(e.message); });
     tick();
-    const t = setInterval(() => { tick(); setBust(Date.now()); }, 3000);
+    const t = setInterval(tick, 3000);
     return () => { alive = false; clearInterval(t); };
   }, []);
+
+  // gera o QR a partir do código (o QR do mylaptime é o próprio código de acesso)
+  const code = h?.pairingCode;
+  useEffect(() => {
+    if (!code || h?.paired) { setQr(null); return; }
+    QRCode.toDataURL(code, { width: 240, margin: 1, errorCorrectionLevel: 'M' })
+      .then(setQr).catch(() => setQr(null));
+  }, [code, h?.paired]);
 
   const target = workerUrl('/health').replace('/health', '');
 
@@ -59,8 +68,9 @@ export default function PairScreen() {
             <li>Abra o app <b>MyLapTime</b> → <b>Carreira</b> → câmera.</li>
             <li>Escaneie o QR abaixo <b>ou</b> cole o código.</li>
           </ol>
-          <img className="pair-qr" alt="QR de pareamento" src={workerUrl('/qr.png') + '?t=' + bust}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          {qr
+            ? <img className="pair-qr" alt="QR de pareamento" src={qr} />
+            : <div className="pair-qr placeholder">gerando QR…</div>}
           <div className="pair-code">
             <span className="k">Código</span>
             <code>{h?.pairingCode || 'gerando…'}</code>
@@ -80,6 +90,7 @@ export default function PairScreen() {
         .pair-live i{width:7px;height:7px;border-radius:50%;background:#000;animation:pulse 1.4s infinite}
         .pair-steps{text-align:left;color:var(--ink-2);font-size:13.5px;margin:12px auto;max-width:340px;padding-left:18px;line-height:1.7}
         .pair-qr{width:240px;height:240px;object-fit:contain;background:#fff;border-radius:12px;padding:8px;margin:6px auto 12px;display:block}
+        .pair-qr.placeholder{background:var(--surface-2);color:var(--muted);font-size:13px;align-items:center;justify-content:center}
         .pair-code{display:flex;flex-direction:column;align-items:center;gap:3px;margin-bottom:10px}
         .pair-code .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
         .pair-code code{font:600 15px ui-monospace,monospace;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;word-break:break-all;max-width:100%}
