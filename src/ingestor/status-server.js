@@ -6,12 +6,41 @@
  */
 const http = require('http');
 
-function startStatusServer(port, getState, getQrPng) {
+function startStatusServer(port, getState, getQrPng, setFocus) {
   const server = http.createServer(async (req, res) => {
     try {
+      res.setHeader('Access-Control-Allow-Origin', '*'); // o frontend busca cross-origin
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'content-type');
+      if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+      // frontend manda o FOCO (eventos analisando + fixados): o worker captura só esses.
+      if (req.method === 'POST' && req.url === '/focus') {
+        let body = '';
+        req.on('data', (c) => { body += c; if (body.length > 1e5) req.destroy(); });
+        req.on('end', () => {
+          let ids = [];
+          try { const j = JSON.parse(body || '{}'); ids = Array.isArray(j) ? j : (j.ids || []); } catch (e) {}
+          if (setFocus) setFocus(ids);
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, focus: (getState().focus || []) }));
+        });
+        return;
+      }
       if (req.url === '/health') {
+        const { eventData, ...light } = getState(); // eventData fora do health (é pesado)
         res.writeHead(200, { 'content-type': 'application/json' });
-        return res.end(JSON.stringify(getState()));
+        return res.end(JSON.stringify(light));
+      }
+      if (req.url === '/events') {
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        return res.end(JSON.stringify(getState().events || []));
+      }
+      const evMatch = req.url.match(/^\/events\/([^/?]+)/);
+      if (evMatch) {
+        const data = (getState().eventData || {})[decodeURIComponent(evMatch[1])];
+        if (!data) { res.writeHead(404, { 'content-type': 'application/json' }); return res.end('{"error":"evento não capturado"}'); }
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        return res.end(JSON.stringify(data));
       }
       if (req.url === '/qr.png') {
         const png = await getQrPng().catch(() => null);

@@ -1,4 +1,5 @@
 node_modules
 dist
 .env
-public/event-data.json
+public/event*.json
+public/kart-pace.json
