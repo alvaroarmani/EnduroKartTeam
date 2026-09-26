@@ -35,11 +35,22 @@ docker compose logs -f          # acompanha (Ctrl+C sai do log, o worker segue)
 ```
 > Se a imagem `...:v1.63.0-noble` falhar, troque no `Dockerfile` por `v1.63.0-jammy` e rode de novo.
 
-## 6. Parear 1× (só na primeira vez)
-No navegador do seu celular/PC, abra **`http://IP_DO_VPS:8080`** → aparece o **código de pareamento**.
-No app **MyLapTime → Carreira**, cole o código (ou escaneie o QR).
-- O perfil do navegador é **persistente** (volume `data/`), então o login **fica salvo** —
-  não precisa parear a cada reinício.
+## 6. Pareamento
+
+### Recomendado: token (pareia 1× no seu PC, o VPS nem escaneia)
+O mylaptime guarda o pareamento num **token** (`localStorage.section_access_token`). A gente
+extrai e reinjeta — aí qualquer navegador/container entra **já pareado**, pra sempre.
+1. No seu **PC**, rode o worker e pareie pela aba **Parear** (escaneie/cole o código).
+2. Ao parear, o worker salva o token em **`data/section-token.txt`**.
+3. Copie esse token pro **`.env`** do VPS: `SECTION_ACCESS_TOKEN=<token>`.
+4. `docker compose up -d --build` — o VPS **entra pareado sozinho** (no log: *"token de pareamento
+   injetado" → "pareado (board acessível)"*), sem escanear, e sobrevive a restart/redeploy.
+> Se um dia o token expirar (a confirmar ao longo dos dias), pareie de novo no PC e atualize o `.env`.
+
+### Alternativa: parear direto no VPS
+Sem o token, abra **`http://IP_DO_VPS:8080`** → **código de pareamento** → no app
+**MyLapTime → Carreira**, cole/escaneie. O perfil é persistente (volume `data/`), então
+o login fica salvo entre reinícios (o token é salvo no volume também).
 
 ## 7. Confirmar que está capturando
 - `http://IP_DO_VPS:8080` deve mostrar **CAPTURANDO** e a lista de eventos.

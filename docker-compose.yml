@@ -18,6 +18,9 @@ services:
       EVENT_FILTER: "camburi"          # captura só as sessões de Jardim Camburi
       PAIRING_WAIT_MS: "3600000"       # 1h de janela pra parear a cada (re)início
       DATA_DIR: "data"
+      # Token de pareamento (RECOMENDADO): pareie 1x localmente, pegue de
+      # data/section-token.txt e ponha no .env — o VPS entra já pareado, sem escanear.
+      SECTION_ACCESS_TOKEN: "${SECTION_ACCESS_TOKEN:-}"
       # Opcional — grava também no Supabase. Sem isso, grava em data/*.jsonl.
       SUPABASE_URL: "${SUPABASE_URL:-}"
       SUPABASE_KEY: "${SUPABASE_KEY:-}"

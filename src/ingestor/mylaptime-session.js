@@ -35,6 +35,19 @@ class MyLapSession {
     this.userDataDir = userDataDir;
     // Define window.MyLapExtractor em toda navegação de documento.
     await this.ctx.addInitScript({ content: EXTRACTOR_SRC });
+    // "Pareamento pra sempre": injeta o token salvo (localStorage.section_access_token) ANTES
+    // de carregar a página — ela já inicia pareada, sem escanear. Vem de SECTION_ACCESS_TOKEN
+    // ou de data/section-token.txt (salvo automaticamente quando você pareia).
+    const tokenFile = path.join(process.cwd(), CONFIG.DATA_DIR || 'data', 'section-token.txt');
+    let token = (process.env.SECTION_ACCESS_TOKEN || '').trim();
+    if (!token) { try { token = fs.readFileSync(tokenFile, 'utf8').trim(); } catch (e) {} }
+    if (token) {
+      await this.ctx.addInitScript((t) => {
+        try { localStorage.setItem('section_access_token', t); localStorage.setItem('accept_term', 'accepted'); localStorage.setItem('cookie_consent', 'accepted_all'); } catch (e) {}
+      }, token);
+      log('token de pareamento injetado — tentando entrar já pareado');
+    }
+    this.savedToken = token;
     this.page = this.ctx.pages()[0] || await this.ctx.newPage();
     this.page.setDefaultTimeout(CONFIG.NAV_TIMEOUT_MS);
     await this.page.goto(LIVE_URL, { waitUntil: 'domcontentloaded' });
@@ -82,25 +95,32 @@ class MyLapSession {
     }).catch(() => {});
   }
 
-  // Espera você parear no app. Prioriza um SINAL EXPLÍCITO por arquivo (data/paired.flag),
-  // acionado quando você confirma que pareou — robusto e sem depender de auto-detecção.
-  // Como backup, também testa "abrir evento" a cada 30s e emite o código via onCode.
+  // Espera você parear no app. NÃO fica navegando enquanto o código está na tela — assim a
+  // tela de pareamento (QR/código) fica ESTÁVEL pra escanear. Detecta o pareamento pelo fato
+  // de o CÓDIGO SUMIR (o modal fecha quando pareia) e confirma UMA vez abrindo um board.
+  // Sinal explícito por arquivo (data/paired.flag) continua como override.
   async waitForPairing(onCode) {
     const flagPath = path.join(process.cwd(), CONFIG.DATA_DIR, 'paired.flag');
     try { fs.unlinkSync(flagPath); } catch (e) {} // limpa flag antiga
     const deadline = Date.now() + CONFIG.PAIRING_WAIT_MS;
-    let lastCode = null, lastOpenTest = Date.now(), lastBeat = 0;
+    let lastCode = null, lastBeat = 0, lastNav = 0;
     while (Date.now() < deadline) {
-      if (fs.existsSync(flagPath)) { this.paired = true; log('sinal de pareamento (paired.flag) recebido — seguindo para captura.'); return true; }
+      if (fs.existsSync(flagPath)) { this.paired = true; log('sinal de pareamento (paired.flag) recebido — seguindo para captura.'); await this.dumpAuthState().catch(() => {}); return true; }
       await this.acceptTerms();
+      // PAREADO? board acessível (sem o modal de pareamento na frente)
+      const board = await this.page.$('.lt-competitors-list').catch(() => null);
+      if (board) { this.paired = true; log('pareado (board acessível).'); await this.backToList().catch(() => {}); await this.dumpAuthState().catch(() => {}); return true; }
       const code = await this.readPairingCode();
-      if (code && code !== lastCode) { lastCode = code; if (onCode) onCode(code); }
-      if (Date.now() - lastBeat > 10000) { lastBeat = Date.now(); log(`aguardando pareamento… código atual=${lastCode ? lastCode.slice(0, 8) + '…' : '(?)'} · (crie data/paired.flag para forçar)`); }
-      if (Date.now() - lastOpenTest > 30000) {
-        lastOpenTest = Date.now();
-        const opened = await this._tryOpenFirstEvent().catch(() => false);
-        if (opened) { this.paired = true; log('pareado (auto-detecção)! board acessível.'); await this.backToList().catch(() => {}); return true; }
+      if (code) {
+        // código na tela = ainda não pareou → NÃO navega (mantém a tela estável pra escanear)
+        if (code !== lastCode) { lastCode = code; if (onCode) onCode(code); }
+      } else if (Date.now() - lastNav > 12000) {
+        // sem código na tela → (re)dispara o modal de pareamento abrindo um board (1 navegação).
+        // se já estiver pareado, o board abre e é detectado no topo do loop.
+        lastNav = Date.now();
+        await this._openEventByIndex(0).catch(() => {});
       }
+      if (Date.now() - lastBeat > 10000) { lastBeat = Date.now(); log(`aguardando pareamento… ${lastCode ? 'código=' + lastCode.slice(0, 8) + '…' : '(gerando)'} · (crie data/paired.flag para forçar)`); }
       await this.page.waitForTimeout(2500);
     }
     return false;
@@ -282,6 +302,25 @@ class MyLapSession {
   }
 
   async screenshotQR() { try { return await this.page.screenshot({ type: 'png' }); } catch (e) { return null; } }
+
+  // Salva o que o mylaptime guarda ao parear (cookies + localStorage) para investigar se
+  // dá pra restaurar o pareamento sem re-escanear ("pareamento pra sempre").
+  async dumpAuthState() {
+    try {
+      const cookies = await this.ctx.cookies();
+      const ls = await this.page.evaluate(() => {
+        const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); } return o;
+      }).catch(() => ({}));
+      const dump = { at: new Date().toISOString(), url: this.page.url(), cookies, localStorage: ls };
+      const p = path.join(process.cwd(), CONFIG.DATA_DIR, 'auth-dump.json');
+      fs.writeFileSync(p, JSON.stringify(dump, null, 2));
+      // salva o token de pareamento (o que dá pra reinjetar em qualquer navegador zerado)
+      if (ls.section_access_token) {
+        try { fs.writeFileSync(path.join(process.cwd(), CONFIG.DATA_DIR, 'section-token.txt'), ls.section_access_token); log('token de pareamento salvo em data/section-token.txt'); } catch (e) {}
+      }
+      log(`estado de auth salvo em ${p} — ${cookies.length} cookies, ${Object.keys(ls).length} chaves localStorage`);
+    } catch (e) { log('falha ao salvar auth-dump:', e.message); }
+  }
 
   async close() { try { if (this.ctx) await this.ctx.close(); else if (this.browser) await this.browser.close(); } catch (e) {} }
 }
