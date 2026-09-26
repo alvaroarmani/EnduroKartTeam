@@ -44,6 +44,7 @@ const CONFIG = {
   // Diagnóstico
   DEBUG: bool(process.env.DEBUG, false),
   DATA_DIR: process.env.DATA_DIR || 'data',                  // buffer/estado persistente do worker
+  USER_DATA_DIR: process.env.USER_DATA_DIR || '',            // perfil do navegador (vazio = data/browser-profile)
 };
 
 CONFIG.SUPABASE_ENABLED = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_KEY);
