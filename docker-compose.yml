@@ -1,0 +1,26 @@
+# Captura 24/7 dos 15 dias em Jardim Camburi.
+#   docker compose up -d --build     # sobe
+#   docker compose logs -f           # acompanha
+#   (parear 1x em http://IP_DO_VPS:8080)
+services:
+  worker:
+    build: .
+    image: endurokart-worker
+    container_name: endurokart-worker
+    restart: unless-stopped            # sobe de novo se cair / reboot do VPS
+    ports:
+      - "8080:8080"                    # página de status + pareamento + /events
+    environment:
+      PORT: "8080"
+      HEADLESS: "true"
+      BROWSER_CHANNEL: ""              # usa o Chromium DA IMAGEM (não o Chrome do sistema)
+      CAPTURE_LAPS: "true"
+      EVENT_FILTER: "camburi"          # captura só as sessões de Jardim Camburi
+      PAIRING_WAIT_MS: "3600000"       # 1h de janela pra parear a cada (re)início
+      DATA_DIR: "data"
+      # Opcional — grava também no Supabase. Sem isso, grava em data/*.jsonl.
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_KEY: "${SUPABASE_KEY:-}"
+    volumes:
+      - ./data:/app/data               # persiste snapshots + perfil (pareamento) + código
+    shm_size: "1gb"                    # Chromium precisa de /dev/shm decente

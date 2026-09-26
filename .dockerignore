@@ -1,7 +1,12 @@
 node_modules
+web
 data
-.env
 .git
-test
+.gitignore
 docs
+test
+viz
+*.log
+.env
 *.md
+.claude
